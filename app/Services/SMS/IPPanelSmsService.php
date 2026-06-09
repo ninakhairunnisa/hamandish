@@ -17,6 +17,7 @@ class IPPanelSmsService
         private readonly string $apiKey,
         private readonly string $patternCode,
         private readonly string $sender,
+        private readonly string $patternVariable = 'code',
     ) {}
 
     public function sendOtp(string $recipient, string $otp): bool
@@ -30,7 +31,7 @@ class IPPanelSmsService
                 'originator' => $this->sender,
                 'recipient' => $recipient,
                 'values' => [
-                    'code' => $otp,
+                    $this->patternVariable => $otp,
                 ],
             ]);
 

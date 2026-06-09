@@ -38,6 +38,8 @@ return [
     'ippanel' => [
         'api_key'      => env('IPPANEL_API_KEY'),
         'pattern_code' => env('IPPANEL_PATTERN_CODE'),
+        // Variable name used in the pattern text, e.g. "code" for %code%.
+        'pattern_variable' => env('IPPANEL_PATTERN_VARIABLE', 'code'),
         'sender'       => env('IPPANEL_SENDER'),
     ],
 
