@@ -71,7 +71,21 @@ export const messenger = {
 
     // Best-effort unsigned user info for optimistic UI only (never trusted).
     unsafeUser() {
-        return wa?.initDataUnsafe?.user || null;
+        if (wa?.initDataUnsafe?.user) return wa.initDataUnsafe.user;
+        // Fall back to parsing the raw init-data (Eitaa hash fallback).
+        try {
+            const params = new URLSearchParams(this.initData());
+            const user = params.get('user');
+            return user ? JSON.parse(user) : null;
+        } catch (_) {
+            return null;
+        }
+    },
+
+    // Messenger account id of the CURRENT session (string) or null.
+    currentUserId() {
+        const id = this.unsafeUser()?.id;
+        return id === undefined || id === null ? null : String(id);
     },
 
     // Ask the host to prompt the user to share their phone with the bot.

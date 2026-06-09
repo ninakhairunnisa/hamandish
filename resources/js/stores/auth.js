@@ -27,10 +27,16 @@ export const useAuthStore = defineStore('auth', {
             localStorage.setItem('token', token);
         },
 
+        rememberMessengerUid() {
+            const uid = messenger.currentUserId();
+            if (uid) localStorage.setItem('messenger_uid', uid);
+        },
+
         logout() {
             this.token = null;
             this.user = null;
             localStorage.removeItem('token');
+            localStorage.removeItem('messenger_uid');
         },
 
         async fetchMe() {
@@ -45,6 +51,19 @@ export const useAuthStore = defineStore('auth', {
         async bootstrap() {
             this.status = 'loading';
             messenger.init();
+
+            // Session-mixup guard: if we're inside a messenger and the host
+            // account differs from the one the stored token was issued for
+            // (another Eitaa/Bale account on the same device), drop the token
+            // and authenticate fresh — otherwise user B would land in user
+            // A's profile (and even their admin panel).
+            // Also drops legacy tokens that predate the uid bookkeeping
+            // (tokenUid null) — re-login is instant for the same account.
+            const currentUid = messenger.available ? messenger.currentUserId() : null;
+            const tokenUid = localStorage.getItem('messenger_uid');
+            if (this.token && currentUid && tokenUid !== currentUid) {
+                this.logout();
+            }
 
             if (this.token) {
                 try {
@@ -72,6 +91,7 @@ export const useAuthStore = defineStore('auth', {
                     init_data: messenger.initData(),
                 });
                 this.setToken(data.token);
+                this.rememberMessengerUid();
                 this.user = data.user.data ?? data.user;
                 this.status = 'authenticated';
             } catch (err) {
@@ -99,6 +119,7 @@ export const useAuthStore = defineStore('auth', {
                         contact_response: response,
                     });
                     this.setToken(data.token);
+                    this.rememberMessengerUid();
                     this.user = data.user.data ?? data.user;
                     this.status = 'authenticated';
                     return;
