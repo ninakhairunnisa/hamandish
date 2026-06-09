@@ -38,6 +38,33 @@ Returns the authenticated user.
 
 ---
 
+## Messenger login (Bale / Eitaa mini-app)
+
+Users open the web app inside Bale or Eitaa. Accounts are **keyed by phone**, so the
+same person logging in from either messenger maps to one user (no duplicates).
+
+### `POST /auth/messenger` — Guest · `throttle:30,1`
+Authenticate a mini-app session from its signed `init_data`.
+
+| Field | Rules |
+|---|---|
+| `provider` | required, `bale`\|`eitaa` |
+| `init_data` | required, the host SDK's signed init-data string |
+
+- **200** `{ "token": "...", "user": {...} }` — identity already linked
+- **409** `{ "need_contact": true, "bot_deep_link": "https://ble.ir/<bot>" }` — verified user must share their phone with the bot first
+- **401** invalid init-data signature
+
+### `POST /integrations/{provider}/webhook?secret=...` — Bot platform only
+Bot webhook. On a shared-contact update it normalises the phone, finds-or-creates the
+phone-keyed user, and links the messenger identity. Secured by `services.{provider}.webhook_secret`.
+Always returns **200** (so the bot doesn't retry); **401** on a bad secret.
+
+**Phone-sync guarantee:** sharing the same number in Bale and Eitaa produces one `users`
+row with two `messenger_identities`.
+
+---
+
 ## Categories
 
 ### `GET /categories` — Public

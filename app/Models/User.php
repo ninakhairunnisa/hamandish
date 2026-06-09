@@ -59,4 +59,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Support::class);
     }
+
+    public function messengerIdentities(): HasMany
+    {
+        return $this->hasMany(MessengerIdentity::class);
+    }
 }

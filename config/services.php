@@ -41,4 +41,16 @@ return [
         'sender'       => env('IPPANEL_SENDER'),
     ],
 
+    'bale' => [
+        'bot_token'      => env('BALE_BOT_TOKEN'),
+        'bot_username'   => env('BALE_BOT_USERNAME'),
+        'webhook_secret' => env('BALE_WEBHOOK_SECRET'),
+    ],
+
+    'eitaa' => [
+        'bot_token'      => env('EITAA_BOT_TOKEN'),
+        'bot_username'   => env('EITAA_BOT_USERNAME'),
+        'webhook_secret' => env('EITAA_WEBHOOK_SECRET'),
+    ],
+
 ];

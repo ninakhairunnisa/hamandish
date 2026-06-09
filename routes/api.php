@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\Admin\AdminProblemController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\Integrations\MessengerWebhookController;
+use App\Http\Controllers\Api\V1\MessengerAuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CommentController;
 use App\Http\Controllers\Api\V1\NotificationController;
@@ -24,7 +26,14 @@ Route::prefix('v1')->group(function (): void {
         Route::post('send-otp', [AuthController::class, 'sendOtp'])->middleware('throttle:10,1');
         Route::post('verify-otp', [AuthController::class, 'verifyOtp'])->middleware('throttle:10,1');
         Route::middleware('auth:sanctum')->get('me', [AuthController::class, 'me']);
+
+        // Bale / Eitaa mini-app login (validates signed init-data).
+        Route::post('messenger', [MessengerAuthController::class, 'authenticate'])
+            ->middleware('throttle:30,1');
     });
+
+    // Bot webhooks (contact sharing). Secured by per-provider secret in the query.
+    Route::post('integrations/{provider}/webhook', [MessengerWebhookController::class, 'handle']);
 
     // ---------------------------------------------------------------------
     // Categories (public)
