@@ -4,41 +4,78 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\Admin\AdminProblemController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CommentController;
+use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\ProblemController;
+use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\SolutionController;
+use App\Http\Controllers\Api\V1\SupportController;
 use App\Http\Controllers\Api\V1\VoteController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
 
+    // ---------------------------------------------------------------------
     // Auth
+    // ---------------------------------------------------------------------
     Route::prefix('auth')->group(function (): void {
         Route::post('send-otp', [AuthController::class, 'sendOtp']);
         Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
         Route::middleware('auth:sanctum')->get('me', [AuthController::class, 'me']);
     });
 
-    // Problems – public feed
+    // ---------------------------------------------------------------------
+    // Categories (public)
+    // ---------------------------------------------------------------------
+    Route::get('categories', [CategoryController::class, 'index']);
+
+    // ---------------------------------------------------------------------
+    // Problems – public feed (supports ?search= &category_id= &sort=popular|latest)
+    // ---------------------------------------------------------------------
+    Route::get('problems/featured', [ProblemController::class, 'featured']);
+    Route::get('problems/popular', [ProblemController::class, 'popular']);
     Route::get('problems', [ProblemController::class, 'index']);
     Route::get('problems/{problem}', [ProblemController::class, 'show']);
 
     // Solutions & Comments – public reads
     Route::get('problems/{problem}/solutions', [SolutionController::class, 'index']);
-    Route::get('solutions/{solution}/comments', [CommentController::class, 'index']);
+    Route::get('problems/{problem}/comments', [CommentController::class, 'indexForProblem']);
+    Route::get('solutions/{solution}/comments', [CommentController::class, 'indexForSolution']);
 
-    // Authenticated routes
+    // ---------------------------------------------------------------------
+    // Authenticated user actions
+    // ---------------------------------------------------------------------
     Route::middleware('auth:sanctum')->group(function (): void {
+        // Problems
         Route::post('problems', [ProblemController::class, 'store']);
+        Route::post('problems/{problem}/support', [SupportController::class, 'toggle']);
+        Route::post('problems/{problem}/comments', [CommentController::class, 'storeForProblem']);
+
+        // Solutions
         Route::post('problems/{problem}/solutions', [SolutionController::class, 'store']);
         Route::post('solutions/{solution}/vote', [VoteController::class, 'vote']);
-        Route::post('solutions/{solution}/comments', [CommentController::class, 'store']);
+        Route::post('solutions/{solution}/comments', [CommentController::class, 'storeForSolution']);
+
+        // Profile
+        Route::get('profile', [ProfileController::class, 'show']);
+        Route::match(['put', 'post'], 'profile', [ProfileController::class, 'update']);
+        Route::get('profile/problems', [ProfileController::class, 'problems']);
+
+        // Notifications
+        Route::get('notifications', [NotificationController::class, 'index']);
+        Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount']);
+        Route::patch('notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+        Route::patch('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
     });
 
-    // Admin routes
+    // ---------------------------------------------------------------------
+    // Admin
+    // ---------------------------------------------------------------------
     Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function (): void {
         Route::get('problems/pending', [AdminProblemController::class, 'pending']);
         Route::patch('problems/{problem}/status', [AdminProblemController::class, 'updateStatus']);
+        Route::patch('problems/{problem}/featured', [AdminProblemController::class, 'setFeatured']);
         Route::patch('problems/{problem}/best-solution', [AdminProblemController::class, 'setBestSolution']);
     });
 });
