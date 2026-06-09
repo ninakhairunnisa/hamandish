@@ -18,6 +18,8 @@ class StoreProblemRequest extends FormRequest
         return [
             'title'       => ['required', 'string', 'min:5', 'max:255'],
             'description' => ['required', 'string', 'min:20'],
+            'category_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'image'       => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:4096'],
         ];
     }
 }

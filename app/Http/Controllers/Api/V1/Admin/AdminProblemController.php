@@ -6,9 +6,11 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\SetBestSolutionRequest;
+use App\Http\Requests\Admin\ToggleFeaturedRequest;
 use App\Http\Requests\Admin\UpdateProblemStatusRequest;
 use App\Http\Resources\ProblemResource;
 use App\Models\Problem;
+use App\Notifications\ProblemStatusChangedNotification;
 use App\Services\ProblemService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -24,8 +26,8 @@ class AdminProblemController extends Controller
     public function pending(): AnonymousResourceCollection
     {
         $problems = Problem::pending()
-            ->with('user')
-            ->withCount('solutions')
+            ->with(['user', 'category'])
+            ->withCount(['solutions', 'comments'])
             ->latest()
             ->paginate(15);
 
@@ -36,7 +38,16 @@ class AdminProblemController extends Controller
     {
         $updated = $this->problemService->updateStatus($problem, $request->validated('status'));
 
-        return response()->json(new ProblemResource($updated->load('user')));
+        $updated->user?->notify(new ProblemStatusChangedNotification($updated));
+
+        return response()->json(new ProblemResource($updated->load(['user', 'category'])));
+    }
+
+    public function setFeatured(ToggleFeaturedRequest $request, Problem $problem): JsonResponse
+    {
+        $updated = $this->problemService->setFeatured($problem, (bool) $request->validated('is_featured'));
+
+        return response()->json(new ProblemResource($updated->load(['user', 'category'])));
     }
 
     public function setBestSolution(SetBestSolutionRequest $request, Problem $problem): JsonResponse

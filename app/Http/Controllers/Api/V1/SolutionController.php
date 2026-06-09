@@ -9,6 +9,7 @@ use App\Http\Requests\Solution\StoreSolutionRequest;
 use App\Http\Resources\SolutionResource;
 use App\Models\Problem;
 use App\Models\Solution;
+use App\Notifications\NewSolutionNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Symfony\Component\HttpFoundation\Response;
@@ -36,6 +37,11 @@ class SolutionController extends Controller
             'user_id'    => $request->user()->id,
             'content'    => $request->validated('content'),
         ]);
+
+        // Notify the problem owner (unless they answered their own problem).
+        if ($problem->user_id !== $request->user()->id) {
+            $problem->user?->notify(new NewSolutionNotification($solution));
+        }
 
         return response()->json(
             new SolutionResource($solution->load('user')),

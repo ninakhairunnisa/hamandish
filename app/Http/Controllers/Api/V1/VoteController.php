@@ -38,4 +38,13 @@ class VoteController extends Controller
             'votes_count' => $solution->votes_count,
         ]);
     }
+
+    public function destroy(\Illuminate\Http\Request $request, Solution $solution): JsonResponse
+    {
+        $this->voteService->removeVote($request->user(), $solution);
+
+        $solution->refresh();
+
+        return response()->json(['votes_count' => $solution->votes_count]);
+    }
 }

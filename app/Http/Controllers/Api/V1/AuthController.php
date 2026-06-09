@@ -33,13 +33,15 @@ class AuthController extends Controller
             ], Response::HTTP_TOO_MANY_REQUESTS);
         }
 
-        RateLimiter::hit($key, 120);
-
         try {
             $this->authService->sendOtp($phone);
         } catch (RuntimeException $e) {
+            // Gateway failed — do not consume the rate-limit slot so the user can retry.
             return response()->json(['message' => $e->getMessage()], Response::HTTP_SERVICE_UNAVAILABLE);
         }
+
+        // Only count the request once an SMS was actually dispatched.
+        RateLimiter::hit($key, 120);
 
         return response()->json(['message' => 'کد OTP ارسال شد.'], Response::HTTP_OK);
     }
