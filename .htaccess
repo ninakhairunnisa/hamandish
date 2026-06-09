@@ -1,0 +1,8 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Route everything through Laravel's public/ front controller.
+    # Required on shared hosting where the document root is the project root
+    # rather than the public/ directory.
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>

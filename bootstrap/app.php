@@ -21,6 +21,9 @@ return Application::configure(basePath: dirname(__DIR__))
         apiPrefix: 'api',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Trust all proxies so HTTPS links are generated correctly on shared hosting.
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'admin' => CheckAdmin::class,
         ]);
