@@ -30,6 +30,12 @@ class MessengerAuthController extends Controller
                 $request->validated('init_data'),
             );
         } catch (InvalidMessengerInitDataException $e) {
+            \Illuminate\Support\Facades\Log::warning('Messenger init-data validation failed', [
+                'provider' => $request->validated('provider'),
+                'reason'   => $e->getMessage(),
+                'init_data_keys' => array_keys(self::parseKeys($request->validated('init_data'))),
+            ]);
+
             return response()->json(['message' => 'اعتبارسنجی نشست پیام‌رسان ناموفق بود.'], Response::HTTP_UNAUTHORIZED);
         } catch (MessengerContactRequiredException $e) {
             // The user is verified but hasn't shared their phone yet.
@@ -46,5 +52,17 @@ class MessengerAuthController extends Controller
             'token' => $token,
             'user'  => new UserResource($user),
         ]);
+    }
+
+    /**
+     * Parameter names only (never values) for safe diagnostic logging.
+     *
+     * @return array<string, mixed>
+     */
+    private static function parseKeys(string $initData): array
+    {
+        parse_str($initData, $params);
+
+        return $params;
     }
 }
