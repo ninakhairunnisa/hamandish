@@ -69,6 +69,10 @@ class CommentController extends Controller
      */
     public function storeReply(StoreCommentRequest $request, Comment $comment): JsonResponse
     {
+        if (! \App\Models\Setting::getBool('comments_enabled')) {
+            return response()->json(['message' => 'ثبت نظر موقتاً غیرفعال است.'], Response::HTTP_FORBIDDEN);
+        }
+
         if ($comment->parent_id !== null) {
             return response()->json(['message' => 'پاسخ به پاسخ امکان‌پذیر نیست.'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
@@ -114,6 +118,10 @@ class CommentController extends Controller
      */
     private function store(StoreCommentRequest $request, Model $commentable): JsonResponse
     {
+        if (! \App\Models\Setting::getBool('comments_enabled')) {
+            return response()->json(['message' => 'ثبت نظر موقتاً غیرفعال است.'], Response::HTTP_FORBIDDEN);
+        }
+
         $existing = $commentable->comments()
             ->whereNull('parent_id')
             ->where('user_id', $request->user()->id)

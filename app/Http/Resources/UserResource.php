@@ -18,7 +18,10 @@ class UserResource extends JsonResource
             'id'           => $this->id,
             'phone'        => $this->phone,
             // Public-facing name: chosen name, else masked phone (0911***67).
-            'display_name' => $fullName !== '' ? $fullName : self::maskPhone((string) $this->phone),
+            'display_name' => ($this->show_name && $fullName !== '')
+                ? $fullName
+                : self::maskPhone((string) $this->phone),
+            'show_name'    => (bool) $this->show_name,
             'label'        => $this->label,
             'first_name' => $this->first_name,
             'last_name'  => $this->last_name,
@@ -34,6 +37,6 @@ class UserResource extends JsonResource
             return 'کاربر';
         }
 
-        return substr($phone, 0, 4) . '***' . substr($phone, -2);
+        return substr($phone, 0, 4) . '*****' . substr($phone, -2);
     }
 }

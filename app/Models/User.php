@@ -22,12 +22,14 @@ class User extends Authenticatable
         'avatar_path',
         'role',
         'label',
+        'show_name',
     ];
 
     protected function casts(): array
     {
         return [
             'role' => 'string',
+            'show_name' => 'boolean',
         ];
     }
 

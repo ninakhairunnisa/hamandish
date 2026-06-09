@@ -19,6 +19,7 @@ class UpdateProfileRequest extends FormRequest
             'first_name' => ['sometimes', 'nullable', 'string', 'max:100'],
             'last_name'  => ['sometimes', 'nullable', 'string', 'max:100'],
             'avatar'     => ['sometimes', 'nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
+            'show_name'  => ['sometimes', 'boolean'],
         ];
     }
 }

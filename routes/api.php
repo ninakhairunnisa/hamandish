@@ -43,6 +43,9 @@ Route::prefix('v1')->group(function (): void {
     // Categories (public)
     // ---------------------------------------------------------------------
     Route::get('categories', [CategoryController::class, 'index']);
+    Route::get('settings', fn () => response()->json([
+        'comments_enabled' => \App\Models\Setting::getBool('comments_enabled'),
+    ]));
 
     // ---------------------------------------------------------------------
     // Problems – public feed (supports ?search= &category_id= &sort=popular|latest)
@@ -68,6 +71,7 @@ Route::prefix('v1')->group(function (): void {
 
         // Solutions
         Route::post('problems/{problem}/solutions', [SolutionController::class, 'store']);
+        Route::patch('solutions/{solution}', [SolutionController::class, 'update']);
         Route::post('solutions/{solution}/vote', [VoteController::class, 'vote']);
         Route::delete('solutions/{solution}/vote', [VoteController::class, 'destroy']);
         Route::post('solutions/{solution}/comments', [CommentController::class, 'storeForSolution']);
@@ -102,5 +106,8 @@ Route::prefix('v1')->group(function (): void {
         Route::patch('users/{user}/role', [AdminDashboardController::class, 'setRole']);
         Route::patch('users/{user}/label', [AdminDashboardController::class, 'setLabel']);
         Route::patch('comments/{comment}/pin', [AdminDashboardController::class, 'pinComment']);
+        Route::patch('solutions/{solution}/pin', [AdminDashboardController::class, 'pinSolution']);
+        Route::get('settings', [AdminDashboardController::class, 'getSettings']);
+        Route::patch('settings', [AdminDashboardController::class, 'updateSettings']);
     });
 });

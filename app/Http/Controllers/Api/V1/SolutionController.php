@@ -19,7 +19,8 @@ class SolutionController extends Controller
     public function index(Problem $problem): AnonymousResourceCollection
     {
         $solutions = $problem->solutions()
-            ->with('user')
+            ->with(['user', 'comments' => fn ($q) => $q->with('user')->oldest()])
+            ->orderByDesc('is_pinned')
             ->orderByDesc('votes_count')
             ->paginate(15);
 
@@ -30,6 +31,17 @@ class SolutionController extends Controller
     {
         if ($problem->status !== 'approved') {
             return response()->json(['message' => 'این مشکل در وضعیت تایید شده نیست.'], Response::HTTP_FORBIDDEN);
+        }
+
+        // One solution per user per problem.
+        $exists = Solution::where('problem_id', $problem->id)
+            ->where('user_id', $request->user()->id)
+            ->exists();
+        if ($exists) {
+            return response()->json(
+                ['message' => 'شما قبلاً برای این مشکل راه‌حل ثبت کرده‌اید؛ می‌توانید همان را ویرایش کنید.'],
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+            );
         }
 
         $solution = Solution::create([
@@ -47,5 +59,29 @@ class SolutionController extends Controller
             new SolutionResource($solution->load('user')),
             Response::HTTP_CREATED,
         );
+    }
+
+    /**
+     * Edit own solution within 7 days; stamps edited_at.
+     */
+    public function update(StoreSolutionRequest $request, Solution $solution): JsonResponse
+    {
+        if ($solution->user_id !== $request->user()->id) {
+            return response()->json(['message' => 'فقط نویسنده می‌تواند راه‌حل را ویرایش کند.'], Response::HTTP_FORBIDDEN);
+        }
+
+        if ($solution->created_at->diffInDays(now()) >= 7) {
+            return response()->json(
+                ['message' => 'مهلت ویرایش راه‌حل (۷ روز) به پایان رسیده است.'],
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+            );
+        }
+
+        $solution->update([
+            'content'   => $request->validated('content'),
+            'edited_at' => now(),
+        ]);
+
+        return response()->json(new SolutionResource($solution->load('user')));
     }
 }
