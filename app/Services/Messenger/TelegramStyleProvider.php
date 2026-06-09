@@ -20,6 +20,12 @@ abstract class TelegramStyleProvider implements MessengerProvider
 
     public function validateInitData(string $initData): array
     {
+        if ($this->botToken === '') {
+            throw new InvalidMessengerInitDataException(
+                'Bot token is not configured for this provider (check the *_BOT_TOKEN env var).',
+            );
+        }
+
         parse_str($initData, $params);
 
         if (empty($params['hash']) || !is_string($params['hash'])) {
