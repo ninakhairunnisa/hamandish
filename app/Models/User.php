@@ -21,6 +21,7 @@ class User extends Authenticatable
         'last_name',
         'avatar_path',
         'role',
+        'label',
     ];
 
     protected function casts(): array

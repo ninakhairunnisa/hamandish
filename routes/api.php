@@ -71,11 +71,14 @@ Route::prefix('v1')->group(function (): void {
         Route::post('solutions/{solution}/vote', [VoteController::class, 'vote']);
         Route::delete('solutions/{solution}/vote', [VoteController::class, 'destroy']);
         Route::post('solutions/{solution}/comments', [CommentController::class, 'storeForSolution']);
+        Route::patch('comments/{comment}', [CommentController::class, 'update']);
+        Route::post('comments/{comment}/replies', [CommentController::class, 'storeReply']);
 
         // Profile
         Route::get('profile', [ProfileController::class, 'show']);
         Route::match(['put', 'post'], 'profile', [ProfileController::class, 'update']);
         Route::get('profile/problems', [ProfileController::class, 'problems']);
+        Route::get('profile/comments', [ProfileController::class, 'comments']);
 
         // Notifications
         Route::get('notifications', [NotificationController::class, 'index']);
@@ -97,5 +100,7 @@ Route::prefix('v1')->group(function (): void {
         Route::get('stats', [AdminDashboardController::class, 'stats']);
         Route::get('users', [AdminDashboardController::class, 'users']);
         Route::patch('users/{user}/role', [AdminDashboardController::class, 'setRole']);
+        Route::patch('users/{user}/label', [AdminDashboardController::class, 'setLabel']);
+        Route::patch('comments/{comment}/pin', [AdminDashboardController::class, 'pinComment']);
     });
 });

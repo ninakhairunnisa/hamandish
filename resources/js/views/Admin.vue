@@ -78,6 +78,18 @@ async function removeProblem(problem) {
     flash('حذف شد 🗑️');
 }
 
+async function setLabel(user) {
+    const label = prompt('لیبل کاربر (خالی = حذف لیبل):', user.label || '');
+    if (label === null) return;
+    try {
+        const { data } = await api.patch(`/admin/users/${user.id}/label`, { label: label.trim() || null });
+        user.label = data.label;
+        flash(user.label ? 'لیبل ثبت شد 🏷️' : 'لیبل حذف شد');
+    } catch (err) {
+        flash(err.response?.data?.message || 'خطا');
+    }
+}
+
 async function toggleRole(user) {
     const role = user.role === 'admin' ? 'user' : 'admin';
     try {
@@ -268,14 +280,24 @@ onMounted(() => switchTab('pending'));
                             <span v-if="u.role === 'admin'" class="text-xs">👑</span>
                         </p>
                         <p class="text-xs text-slate-400" dir="ltr">{{ u.phone }}</p>
+                        <span
+                            v-if="u.label"
+                            class="mt-1 inline-block rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-semibold text-white"
+                        >{{ u.label }}</span>
                     </div>
-                    <button
-                        class="rounded-xl px-3 py-1.5 text-sm font-semibold active:scale-95"
-                        :class="u.role === 'admin' ? 'bg-rose-100 text-rose-700' : 'bg-blue-100 text-blue-700'"
-                        @click="toggleRole(u)"
-                    >
-                        {{ u.role === 'admin' ? 'حذف ادمین' : 'ادمین کن' }}
-                    </button>
+                    <div class="flex flex-col gap-1.5">
+                        <button
+                            class="rounded-xl px-3 py-1.5 text-xs font-semibold active:scale-95"
+                            :class="u.role === 'admin' ? 'bg-rose-100 text-rose-700' : 'bg-blue-100 text-blue-700'"
+                            @click="toggleRole(u)"
+                        >
+                            {{ u.role === 'admin' ? 'حذف ادمین' : 'ادمین کن' }}
+                        </button>
+                        <button
+                            class="rounded-xl bg-indigo-100 px-3 py-1.5 text-xs font-semibold text-indigo-700 active:scale-95"
+                            @click="setLabel(u)"
+                        >🏷️ لیبل</button>
+                    </div>
                 </div>
             </div>
         </div>

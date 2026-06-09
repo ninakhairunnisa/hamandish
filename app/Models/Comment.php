@@ -18,8 +18,19 @@ class Comment extends Model
         'commentable_id',
         'commentable_type',
         'user_id',
+        'parent_id',
         'content',
+        'edited_at',
+        'is_pinned',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'edited_at' => 'datetime',
+            'is_pinned' => 'boolean',
+        ];
+    }
 
     public function commentable(): MorphTo
     {
@@ -29,5 +40,15 @@ class Comment extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_id');
+    }
+
+    public function replies(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(self::class, 'parent_id')->oldest();
     }
 }

@@ -77,4 +77,32 @@ class AdminDashboardController extends Controller
 
         return response()->json(new UserResource($user));
     }
+
+    /**
+     * Set or clear a user's public label (e.g. "مسئول اداره برق").
+     */
+    public function setLabel(Request $request, User $user): JsonResponse
+    {
+        $validated = $request->validate([
+            'label' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $user->update(['label' => $validated['label'] ?? null]);
+
+        return response()->json(new UserResource($user));
+    }
+
+    /**
+     * Pin/unpin a comment so it stays at the top of its thread.
+     */
+    public function pinComment(Request $request, \App\Models\Comment $comment): JsonResponse
+    {
+        $validated = $request->validate([
+            'is_pinned' => ['required', 'boolean'],
+        ]);
+
+        $comment->update(['is_pinned' => $validated['is_pinned']]);
+
+        return response()->json(new \App\Http\Resources\CommentResource($comment->load('user')));
+    }
 }
