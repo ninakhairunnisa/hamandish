@@ -32,6 +32,11 @@ class MessengerWebhookController extends Controller
             abort(Response::HTTP_UNAUTHORIZED);
         }
 
+        \Illuminate\Support\Facades\Log::info('Messenger webhook received', [
+            'provider' => $provider,
+            'keys'     => array_keys($request->all()),
+        ]);
+
         $this->messengerAuth->handleContactWebhook($provider, $request->all());
 
         // Always 200 so the bot platform does not retry/back off.

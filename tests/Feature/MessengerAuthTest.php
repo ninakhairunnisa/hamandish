@@ -104,6 +104,56 @@ class MessengerAuthTest extends TestCase
         $this->assertSame(2, $user->messengerIdentities()->count());
     }
 
+    /** Build a validly-signed contact response (Eitaa requestContact result). */
+    private function signedContactResponse(string $token, string $phone): string
+    {
+        $params = [
+            'auth_date' => (string) time(),
+            'contact'   => json_encode(['phone_number' => $phone, 'first_name' => 'Ali', 'user_id' => 777]),
+        ];
+        ksort($params);
+        $dcs = implode("\n", array_map(fn ($k, $v) => "$k=$v", array_keys($params), $params));
+        $secret = hash_hmac('sha256', $token, 'WebAppData', true);
+        $params['hash'] = hash_hmac('sha256', $dcs, $secret);
+
+        return http_build_query($params);
+    }
+
+    public function test_contact_response_completes_login_and_links_identity(): void
+    {
+        $initData = $this->signedInitData($this->eitaaToken, '777');
+        $contactResponse = $this->signedContactResponse($this->eitaaToken, '+989121234567');
+
+        $res = $this->postJson('/api/v1/auth/messenger/contact', [
+            'provider'         => 'eitaa',
+            'init_data'        => $initData,
+            'contact_response' => $contactResponse,
+        ])->assertOk()->assertJsonStructure(['token', 'user']);
+
+        $user = User::where('phone', '09121234567')->firstOrFail();
+        $this->assertDatabaseHas('messenger_identities', [
+            'provider'          => 'eitaa',
+            'messenger_user_id' => '777',
+            'user_id'           => $user->id,
+        ]);
+
+        // Subsequent plain messenger login now succeeds without contact.
+        $this->postJson('/api/v1/auth/messenger', ['provider' => 'eitaa', 'init_data' => $initData])
+            ->assertOk();
+    }
+
+    public function test_contact_response_with_bad_signature_is_rejected(): void
+    {
+        $initData = $this->signedInitData($this->eitaaToken, '777');
+        $forged = $this->signedContactResponse('wrong-token', '+989121234567');
+
+        $this->postJson('/api/v1/auth/messenger/contact', [
+            'provider'         => 'eitaa',
+            'init_data'        => $initData,
+            'contact_response' => $forged,
+        ])->assertStatus(401);
+    }
+
     public function test_webhook_rejects_bad_secret(): void
     {
         $this->postJson('/api/v1/integrations/bale/webhook?secret=nope', [

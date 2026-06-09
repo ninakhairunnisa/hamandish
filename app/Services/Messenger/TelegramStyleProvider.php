@@ -35,20 +35,7 @@ abstract class TelegramStyleProvider implements MessengerProvider
         $providedHash = $params['hash'];
         unset($params['hash']);
 
-        // Build the data-check-string: "key=value" pairs sorted by key, joined by \n.
-        ksort($params);
-        $pairs = [];
-        foreach ($params as $key => $value) {
-            $pairs[] = $key . '=' . $value;
-        }
-        $dataCheckString = implode("\n", $pairs);
-
-        $secretKey = hash_hmac('sha256', $this->botToken, 'WebAppData', true);
-        $expectedHash = hash_hmac('sha256', $dataCheckString, $secretKey);
-
-        if (!hash_equals($expectedHash, $providedHash)) {
-            throw new InvalidMessengerInitDataException('Init-data signature mismatch.');
-        }
+        $this->assertSignature($params, $providedHash);
 
         $user = [];
         if (!empty($params['user']) && is_string($params['user'])) {
@@ -65,6 +52,64 @@ abstract class TelegramStyleProvider implements MessengerProvider
             'first_name'        => $user['first_name'] ?? null,
             'last_name'         => $user['last_name'] ?? null,
         ];
+    }
+
+    public function validateContactResponse(string $response): array
+    {
+        if ($this->botToken === '') {
+            throw new InvalidMessengerInitDataException(
+                'Bot token is not configured for this provider (check the *_BOT_TOKEN env var).',
+            );
+        }
+
+        parse_str($response, $params);
+
+        if (empty($params['hash']) || !is_string($params['hash'])) {
+            throw new InvalidMessengerInitDataException('Missing contact-response hash.');
+        }
+
+        $providedHash = $params['hash'];
+        unset($params['hash']);
+
+        $this->assertSignature($params, $providedHash);
+
+        $contact = [];
+        if (!empty($params['contact']) && is_string($params['contact'])) {
+            $contact = json_decode($params['contact'], true) ?: [];
+        }
+
+        if (empty($contact['phone_number'])) {
+            throw new InvalidMessengerInitDataException('Contact response has no phone number.');
+        }
+
+        return [
+            'phone'      => (string) $contact['phone_number'],
+            'first_name' => $contact['first_name'] ?? null,
+            'last_name'  => $contact['last_name'] ?? null,
+        ];
+    }
+
+    /**
+     * Telegram-style HMAC check: data-check-string of sorted key=value pairs,
+     * keyed by HMAC-SHA256(botToken, "WebAppData").
+     *
+     * @param  array<string, mixed>  $params
+     */
+    private function assertSignature(array $params, string $providedHash): void
+    {
+        ksort($params);
+        $pairs = [];
+        foreach ($params as $key => $value) {
+            $pairs[] = $key . '=' . $value;
+        }
+        $dataCheckString = implode("\n", $pairs);
+
+        $secretKey = hash_hmac('sha256', $this->botToken, 'WebAppData', true);
+        $expectedHash = hash_hmac('sha256', $dataCheckString, $secretKey);
+
+        if (!hash_equals($expectedHash, $providedHash)) {
+            throw new InvalidMessengerInitDataException('Signature mismatch.');
+        }
     }
 
     public function parseContactUpdate(array $payload): ?array

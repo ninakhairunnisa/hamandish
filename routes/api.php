@@ -30,6 +30,9 @@ Route::prefix('v1')->group(function (): void {
         // Bale / Eitaa mini-app login (validates signed init-data).
         Route::post('messenger', [MessengerAuthController::class, 'authenticate'])
             ->middleware('throttle:30,1');
+        // Completes login with the signed contact response from requestContact().
+        Route::post('messenger/contact', [MessengerAuthController::class, 'contact'])
+            ->middleware('throttle:30,1');
     });
 
     // Bot webhooks (contact sharing). Secured by per-provider secret in the query.
