@@ -87,9 +87,28 @@ export const useAuthStore = defineStore('auth', {
         },
 
         async shareContact() {
-            await messenger.requestContact(this.botDeepLink);
-            // The bot webhook links the phone server-side; poll the login a few
-            // times so the user doesn't have to press "retry" manually.
+            const { ok, response } = await messenger.requestContact(this.botDeepLink);
+
+            // Eitaa hands the signed contact straight back to the web app —
+            // complete login directly without waiting for the bot webhook.
+            if (ok && response) {
+                try {
+                    const { data } = await api.post('/auth/messenger/contact', {
+                        provider: messenger.provider,
+                        init_data: messenger.initData(),
+                        contact_response: response,
+                    });
+                    this.setToken(data.token);
+                    this.user = data.user.data ?? data.user;
+                    this.status = 'authenticated';
+                    return;
+                } catch (_) {
+                    // fall through to webhook polling below
+                }
+            }
+
+            // Otherwise the bot webhook links the phone server-side; poll the
+            // login a few times so the user doesn't have to press "retry".
             for (let attempt = 0; attempt < 5; attempt++) {
                 await new Promise((r) => setTimeout(r, 2000));
                 await this.loginWithMessenger();

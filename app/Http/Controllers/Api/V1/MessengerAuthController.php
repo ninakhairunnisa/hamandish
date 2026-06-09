@@ -55,6 +55,42 @@ class MessengerAuthController extends Controller
     }
 
     /**
+     * Complete login with the signed contact response from requestContact().
+     * Used when the host returns the shared phone directly to the web app
+     * (Eitaa does) instead of delivering it via the bot webhook.
+     */
+    public function contact(\Illuminate\Http\Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'provider'         => ['required', 'in:bale,eitaa'],
+            'init_data'        => ['required', 'string'],
+            'contact_response' => ['required', 'string'],
+        ]);
+
+        try {
+            $user = $this->messengerAuth->authenticateWithContact(
+                $validated['provider'],
+                $validated['init_data'],
+                $validated['contact_response'],
+            );
+        } catch (InvalidMessengerInitDataException $e) {
+            \Illuminate\Support\Facades\Log::warning('Messenger contact-response validation failed', [
+                'provider' => $validated['provider'],
+                'reason'   => $e->getMessage(),
+            ]);
+
+            return response()->json(['message' => 'اعتبارسنجی شماره تماس ناموفق بود.'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $token = $user->createToken('messenger')->plainTextToken;
+
+        return response()->json([
+            'token' => $token,
+            'user'  => new UserResource($user),
+        ]);
+    }
+
+    /**
      * Parameter names only (never values) for safe diagnostic logging.
      *
      * @return array<string, mixed>

@@ -30,6 +30,16 @@ interface MessengerProvider
     public function parseContactUpdate(array $payload): ?array;
 
     /**
+     * Validate the signed contact response the host hands the web app after
+     * requestContact() (same HMAC scheme as init-data) and return the contact.
+     *
+     * @return array{phone: string, first_name: ?string, last_name: ?string}
+     *
+     * @throws \App\Exceptions\InvalidMessengerInitDataException
+     */
+    public function validateContactResponse(string $response): array;
+
+    /**
      * Deep link the user can tap to open the bot and share their contact.
      */
     public function botDeepLink(): string;

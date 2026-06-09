@@ -42,6 +42,45 @@ class MessengerAuthService
     }
 
     /**
+     * Complete login using the signed contact response the host hands the
+     * web app after requestContact(). Validates both the init-data session
+     * and the contact signature, then links the identity to the phone-keyed
+     * user (creating it if needed) — same guarantee as the webhook path.
+     */
+    public function authenticateWithContact(string $providerName, string $initData, string $contactResponse): User
+    {
+        $provider = $this->manager->provider($providerName);
+        $session = $provider->validateInitData($initData);
+        $contact = $provider->validateContactResponse($contactResponse);
+
+        $phone = PhoneNumber::normalize($contact['phone']);
+
+        return DB::transaction(function () use ($provider, $session, $contact, $phone): User {
+            $user = User::firstOrCreate(
+                ['phone' => $phone],
+                [
+                    'first_name' => $contact['first_name'] ?? $session['first_name'],
+                    'last_name'  => $contact['last_name'] ?? $session['last_name'],
+                    'role'       => 'user',
+                ],
+            );
+
+            MessengerIdentity::updateOrCreate(
+                [
+                    'provider'          => $provider->name(),
+                    'messenger_user_id' => $session['messenger_user_id'],
+                ],
+                [
+                    'user_id'  => $user->id,
+                    'username' => $session['username'],
+                ],
+            );
+
+            return $user;
+        });
+    }
+
+    /**
      * Handle a bot webhook update. When it carries a shared contact we resolve
      * (or create) the phone-keyed user and link this messenger identity to it.
      *

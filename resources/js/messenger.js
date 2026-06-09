@@ -75,20 +75,27 @@ export const messenger = {
     },
 
     // Ask the host to prompt the user to share their phone with the bot.
-    // Newer hosts support requestContact(); otherwise we deep-link the bot.
+    // Resolves { ok, response } — `response` is the signed contact payload
+    // some hosts (Eitaa) hand straight back to the web app; the backend
+    // validates its HMAC and completes login without the bot webhook.
+    // Falls back to deep-linking the bot when requestContact is unsupported.
     requestContact(botDeepLink) {
         if (wa?.requestContact) {
             return new Promise((resolve) => {
                 try {
-                    wa.requestContact((ok) => resolve(!!ok));
+                    wa.requestContact((ok, result) => {
+                        const raw = result?.response ?? result?.responseUnsafe ?? result;
+                        const response = typeof raw === 'string' ? raw : '';
+                        resolve({ ok: !!ok, response });
+                    });
                 } catch (_) {
                     this.openBot(botDeepLink);
-                    resolve(false);
+                    resolve({ ok: false, response: '' });
                 }
             });
         }
         this.openBot(botDeepLink);
-        return Promise.resolve(false);
+        return Promise.resolve({ ok: false, response: '' });
     },
 
     openBot(url) {
