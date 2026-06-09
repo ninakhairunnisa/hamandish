@@ -11,9 +11,11 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('comments', function (Blueprint $table) {
-            $table->nullableMorphs('commentable'); // commentable_id + commentable_type
-        });
+        if (! Schema::hasColumn('comments', 'commentable_type')) {
+            Schema::table('comments', function (Blueprint $table) {
+                $table->nullableMorphs('commentable'); // commentable_id + commentable_type
+            });
+        }
 
         // Backfill any existing rows that referenced a solution directly.
         if (Schema::hasColumn('comments', 'solution_id')) {

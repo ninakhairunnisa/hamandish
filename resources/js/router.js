@@ -8,8 +8,10 @@ const routes = [
     { path: '/profile', name: 'profile', component: () => import('./views/Profile.vue') },
 ];
 
+// VITE_APP_BASE sets the router base path.
+// On shared hosting at /hamandish/ set: VITE_APP_BASE=/hamandish/
 export default createRouter({
-    history: createWebHistory(),
+    history: createWebHistory(import.meta.env.VITE_APP_BASE ?? '/'),
     routes,
     scrollBehavior: () => ({ top: 0 }),
 });
