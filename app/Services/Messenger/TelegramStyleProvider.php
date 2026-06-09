@@ -73,17 +73,37 @@ abstract class TelegramStyleProvider implements MessengerProvider
 
         $this->assertSignature($params, $providedHash);
 
+        // Hosts differ in where they put the contact: Telegram/Bale use a
+        // "contact" JSON param; Eitaa variants nest it elsewhere or flatten
+        // the phone to a top-level field. Accept all known shapes.
         $contact = [];
-        if (!empty($params['contact']) && is_string($params['contact'])) {
-            $contact = json_decode($params['contact'], true) ?: [];
+        foreach (['contact', 'user', 'result'] as $key) {
+            if (empty($params[$key])) {
+                continue;
+            }
+            $candidate = is_string($params[$key])
+                ? (json_decode($params[$key], true) ?: [])
+                : (is_array($params[$key]) ? $params[$key] : []);
+            if (!empty($candidate['phone_number']) || !empty($candidate['phone'])) {
+                $contact = $candidate;
+                break;
+            }
         }
 
-        if (empty($contact['phone_number'])) {
-            throw new InvalidMessengerInitDataException('Contact response has no phone number.');
+        $phone = $contact['phone_number']
+            ?? $contact['phone']
+            ?? $params['phone_number']
+            ?? $params['phone']
+            ?? null;
+
+        if (empty($phone) || !is_string($phone)) {
+            throw new InvalidMessengerInitDataException(
+                'Contact response has no phone number. Params: ' . implode(',', array_keys($params)),
+            );
         }
 
         return [
-            'phone'      => (string) $contact['phone_number'],
+            'phone'      => $phone,
             'first_name' => $contact['first_name'] ?? null,
             'last_name'  => $contact['last_name'] ?? null,
         ];
