@@ -2,20 +2,60 @@
 // Detects the environment, exposes the signed initData, and provides the
 // contact-share + UI helpers the app needs. Degrades gracefully in a browser.
 
+// Provider can be forced via the mini-app URL (?provider=eitaa|bale).
+// We persist it because SPA navigation may drop the query string.
+function detectForcedProvider() {
+    const fromQuery = new URLSearchParams(window.location.search).get('provider');
+    if (fromQuery === 'eitaa' || fromQuery === 'bale') {
+        sessionStorage.setItem('messenger_provider', fromQuery);
+        return fromQuery;
+    }
+    const stored = sessionStorage.getItem('messenger_provider');
+    return stored === 'eitaa' || stored === 'bale' ? stored : null;
+}
+
+// Telegram-style hosts put the signed init-data in the URL fragment
+// (#tgWebAppData=...) before any SDK loads. This is the most reliable
+// source in Eitaa, where no JS SDK may be injected at all.
+function initDataFromHash() {
+    const hash = window.location.hash.slice(1);
+    if (!hash) return '';
+    const params = new URLSearchParams(hash);
+    const data = params.get('tgWebAppData');
+    if (data) {
+        sessionStorage.setItem('messenger_init_data', data);
+        return data;
+    }
+    return sessionStorage.getItem('messenger_init_data') || '';
+}
+
 function pickWebApp() {
+    const forced = detectForcedProvider();
+
     // Bale exposes window.Bale.WebApp; Eitaa exposes window.Eitaa.WebApp;
     // both mirror the Telegram WebApp surface (window.Telegram.WebApp).
-    if (window.Bale?.WebApp) return { provider: 'bale', wa: window.Bale.WebApp };
     if (window.Eitaa?.WebApp) return { provider: 'eitaa', wa: window.Eitaa.WebApp };
-    if (window.Telegram?.WebApp) return { provider: 'bale', wa: window.Telegram.WebApp };
+    if (window.Bale?.WebApp) return { provider: forced ?? 'bale', wa: window.Bale.WebApp };
+    if (window.Telegram?.WebApp && window.Telegram.WebApp.initData) {
+        return { provider: forced ?? 'bale', wa: window.Telegram.WebApp };
+    }
+
+    // No SDK object — fall back to the URL-fragment init-data if the host
+    // provided it (Eitaa does), keyed by the forced provider.
+    if (forced && initDataFromHash()) {
+        return { provider: forced, wa: null };
+    }
+
     return { provider: null, wa: null };
 }
 
 const { provider, wa } = pickWebApp();
+const hashInitData = initDataFromHash();
 
 export const messenger = {
     provider,
-    available: !!wa,
+    // Available when we have either an SDK object or raw init-data from the URL.
+    available: !!wa || (!!provider && !!hashInitData),
 
     init() {
         try {
@@ -26,7 +66,7 @@ export const messenger = {
 
     // The signed init-data string the backend validates via HMAC.
     initData() {
-        return wa?.initData || '';
+        return wa?.initData || hashInitData || '';
     },
 
     // Best-effort unsigned user info for optimistic UI only (never trusted).
