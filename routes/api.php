@@ -20,8 +20,9 @@ Route::prefix('v1')->group(function (): void {
     // Auth
     // ---------------------------------------------------------------------
     Route::prefix('auth')->group(function (): void {
-        Route::post('send-otp', [AuthController::class, 'sendOtp']);
-        Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
+        // Defense-in-depth IP throttle on top of the per-phone limiter / attempt counter.
+        Route::post('send-otp', [AuthController::class, 'sendOtp'])->middleware('throttle:10,1');
+        Route::post('verify-otp', [AuthController::class, 'verifyOtp'])->middleware('throttle:10,1');
         Route::middleware('auth:sanctum')->get('me', [AuthController::class, 'me']);
     });
 
@@ -55,6 +56,7 @@ Route::prefix('v1')->group(function (): void {
         // Solutions
         Route::post('problems/{problem}/solutions', [SolutionController::class, 'store']);
         Route::post('solutions/{solution}/vote', [VoteController::class, 'vote']);
+        Route::delete('solutions/{solution}/vote', [VoteController::class, 'destroy']);
         Route::post('solutions/{solution}/comments', [CommentController::class, 'storeForSolution']);
 
         // Profile

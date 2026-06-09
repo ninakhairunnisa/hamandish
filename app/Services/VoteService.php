@@ -18,6 +18,10 @@ class VoteService
             throw new RuntimeException('Vote type must be +1 or -1.');
         }
 
+        if ($solution->user_id === $user->id) {
+            throw new RuntimeException('شما نمی‌توانید به راه‌حل خودتان رأی دهید.');
+        }
+
         $vote = DB::transaction(function () use ($user, $solution, $type): Vote {
             $vote = Vote::updateOrCreate(
                 [

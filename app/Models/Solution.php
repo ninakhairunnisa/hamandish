@@ -28,6 +28,16 @@ class Solution extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        // If a solution is removed, detach it from any problem that featured it
+        // as the "best solution" so we never point at a hidden/trashed row.
+        static::deleting(function (Solution $solution): void {
+            Problem::where('best_solution_id', $solution->id)
+                ->update(['best_solution_id' => null]);
+        });
+    }
+
     public function problem(): BelongsTo
     {
         return $this->belongsTo(Problem::class);
