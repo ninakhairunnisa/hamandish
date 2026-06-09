@@ -11,6 +11,7 @@ const categories = ref([]);
 const submitting = ref(false);
 const done = ref(false);
 const error = ref(null);
+const fieldErrors = ref({});
 
 onMounted(async () => {
     const { data } = await api.get('/categories');
@@ -19,6 +20,7 @@ onMounted(async () => {
 
 async function submit() {
     error.value = null;
+    fieldErrors.value = {};
     submitting.value = true;
     try {
         await api.post('/problems', {
@@ -30,6 +32,7 @@ async function submit() {
         setTimeout(() => router.push({ name: 'feed' }), 1500);
     } catch (e) {
         error.value = e.response?.data?.message || 'خطا در ثبت مشکل.';
+        fieldErrors.value = e.response?.data?.errors || {};
     } finally {
         submitting.value = false;
     }
@@ -68,6 +71,10 @@ async function submit() {
             ></textarea>
 
             <p v-if="error" class="text-sm text-rose-600">{{ error }}</p>
+            <ul v-if="Object.keys(fieldErrors).length" class="space-y-1 text-xs text-rose-600">
+                <li v-for="(msgs, field) in fieldErrors" :key="field">• {{ msgs[0] }}</li>
+            </ul>
+            <p class="text-xs text-slate-400">عنوان حداقل ۵ حرف و توضیحات حداقل ۲۰ حرف باشد.</p>
 
             <button
                 type="submit"
