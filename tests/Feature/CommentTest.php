@@ -89,6 +89,6 @@ class CommentTest extends TestCase
 
         $this->actingAs($user)->getJson('/api/v1/auth/me')
             ->assertOk()
-            ->assertJsonPath('display_name', '0911***67');
+            ->assertJsonPath('display_name', '0911*****67');
     }
 }

@@ -6,6 +6,7 @@ const tab = ref('pending'); // pending | problems | users | stats
 const loading = ref(false);
 
 const stats = ref(null);
+const commentsEnabled = ref(true);
 const pending = ref([]);
 const problems = ref([]);
 const users = ref([]);
@@ -21,6 +22,14 @@ function flash(text) {
 async function loadStats() {
     const { data } = await api.get('/admin/stats');
     stats.value = data;
+    const st = await api.get('/admin/settings');
+    commentsEnabled.value = !!st.data.comments_enabled;
+}
+
+async function toggleComments() {
+    const { data } = await api.patch('/admin/settings', { comments_enabled: !commentsEnabled.value });
+    commentsEnabled.value = !!data.comments_enabled;
+    flash(commentsEnabled.value ? 'نظرات فعال شد ✅' : 'نظرات غیرفعال شد 🔕');
 }
 
 async function loadPending() {
@@ -146,7 +155,15 @@ onMounted(() => switchTab('pending'));
 
         <div v-else class="px-4 py-4">
             <!-- آمار -->
-            <div v-if="tab === 'stats' && stats" class="grid grid-cols-2 gap-3">
+            <div v-if="tab === 'stats' && stats">
+                <button
+                    class="mb-4 w-full rounded-2xl py-3 text-sm font-bold active:scale-95"
+                    :class="commentsEnabled ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"
+                    @click="toggleComments"
+                >
+                    {{ commentsEnabled ? '💬 نظرات/پاسخ‌ها: فعال (برای غیرفعال‌سازی بزنید)' : '🔕 نظرات/پاسخ‌ها: غیرفعال (برای فعال‌سازی بزنید)' }}
+                </button>
+                <div class="grid grid-cols-2 gap-3">
                 <div
                     v-for="item in [
                         { label: 'کاربران', value: stats.users, icon: '👥' },
@@ -165,6 +182,7 @@ onMounted(() => switchTab('pending'));
                     <div class="text-2xl">{{ item.icon }}</div>
                     <div class="mt-1 text-2xl font-extrabold text-slate-800">{{ item.value }}</div>
                     <div class="text-xs text-slate-400">{{ item.label }}</div>
+                </div>
                 </div>
             </div>
 

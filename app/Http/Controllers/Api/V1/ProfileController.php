@@ -23,7 +23,7 @@ class ProfileController extends Controller
     public function update(UpdateProfileRequest $request): JsonResponse
     {
         $user = $request->user();
-        $data = $request->safe()->only(['first_name', 'last_name']);
+        $data = $request->safe()->only(['first_name', 'last_name', 'show_name']);
 
         if ($request->hasFile('avatar')) {
             if ($user->avatar_path) {

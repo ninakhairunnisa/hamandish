@@ -105,4 +105,35 @@ class AdminDashboardController extends Controller
 
         return response()->json(new \App\Http\Resources\CommentResource($comment->load('user')));
     }
+
+    /**
+     * Pin/unpin a solution so it stays at the top of the list.
+     */
+    public function pinSolution(Request $request, \App\Models\Solution $solution): JsonResponse
+    {
+        $validated = $request->validate(['is_pinned' => ['required', 'boolean']]);
+
+        $solution->update(['is_pinned' => $validated['is_pinned']]);
+
+        return response()->json(new \App\Http\Resources\SolutionResource($solution->load('user')));
+    }
+
+    /**
+     * Global app settings (currently: comments/replies on or off).
+     */
+    public function getSettings(): JsonResponse
+    {
+        return response()->json([
+            'comments_enabled' => \App\Models\Setting::getBool('comments_enabled'),
+        ]);
+    }
+
+    public function updateSettings(Request $request): JsonResponse
+    {
+        $validated = $request->validate(['comments_enabled' => ['required', 'boolean']]);
+
+        \App\Models\Setting::setBool('comments_enabled', $validated['comments_enabled']);
+
+        return $this->getSettings();
+    }
 }

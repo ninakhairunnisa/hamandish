@@ -18,12 +18,16 @@ class Solution extends Model
         'problem_id',
         'user_id',
         'content',
+        'edited_at',
+        'is_pinned',
         'votes_count',
     ];
 
     protected function casts(): array
     {
         return [
+            'edited_at' => 'datetime',
+            'is_pinned' => 'boolean',
             'votes_count' => 'integer',
         ];
     }
