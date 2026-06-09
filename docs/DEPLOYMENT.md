@@ -123,9 +123,16 @@ php artisan view:cache
 
 | فیلد | مقدار |
 |---|---|
-| آدرس Mini-App | `https://menon.ir/hamandish/` |
+| آدرس Mini-App در **ایتا** | `https://menon.ir/hamandish/?provider=eitaa` |
+| آدرس Mini-App در **بله** | `https://menon.ir/hamandish/?provider=bale` |
 | Webhook بله | `https://menon.ir/hamandish/api/v1/integrations/bale/webhook?secret=BALE_WEBHOOK_SECRET` |
 | Webhook ایتا | `https://menon.ir/hamandish/api/v1/integrations/eitaa/webhook?secret=EITAA_WEBHOOK_SECRET` |
+
+> ⚠️ پارامتر `?provider=eitaa` در آدرس مینی‌اپ ایتا **الزامی** است — ایتا SDK جاوااسکریپت
+> تزریق نمی‌کند و اپ از این پارامتر + داده‌ی `tgWebAppData` در URL fragment برای
+> تشخیص و احراز هویت استفاده می‌کند.
+>
+> نسخه وب (مرورگر عادی) به‌صورت خودکار فرم ورود با شماره موبایل + کد OTP نمایش می‌دهد.
 
 ---
 
