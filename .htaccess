@@ -4,5 +4,11 @@
     # Route everything through Laravel's public/ front controller.
     # Required on shared hosting where the document root is the project root
     # rather than the public/ directory.
-    RewriteRule ^(.*)$ public/$1 [L]
+
+    # Serve real files/directories directly (e.g. public/build/*, public/storage/*).
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    RewriteRule ^(.*)$ public/$1 [L,QSA]
 </IfModule>

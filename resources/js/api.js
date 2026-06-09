@@ -1,7 +1,11 @@
 import axios from 'axios';
 
+// VITE_APP_BASE (e.g. /hamandish/) is set for sub-path deployments.
+// Strip the trailing slash so we can append /api/v1 cleanly.
+const appBase = (import.meta.env.VITE_APP_BASE ?? '/').replace(/\/$/, '');
+
 const api = axios.create({
-    baseURL: '/api/v1',
+    baseURL: appBase + '/api/v1',
     headers: { Accept: 'application/json' },
 });
 

@@ -51,9 +51,13 @@ cp .env.example .env
 مقادیر زیر را ویرایش کنید:
 
 ```dotenv
+APP_NAME=هم‌اندیش
+APP_ENV=production
+APP_DEBUG=false
 APP_KEY=                        # با php artisan key:generate پر می‌شود
 APP_URL=https://menon.ir/hamandish
 
+DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_DATABASE=menon_hamandish
 DB_USERNAME=your_user
@@ -61,6 +65,8 @@ DB_PASSWORD=your_pass
 
 VITE_APP_BASE=/hamandish/
 VITE_BUILD_BASE=/hamandish/build/
+
+APP_LOCALE=fa
 
 IPPANEL_API_KEY=...
 BALE_BOT_TOKEN=...
