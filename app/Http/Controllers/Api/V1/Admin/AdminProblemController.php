@@ -23,6 +23,32 @@ class AdminProblemController extends Controller
         private readonly ProblemService $problemService,
     ) {}
 
+    /**
+     * All problems regardless of status, with status/search filters.
+     */
+    public function index(\Illuminate\Http\Request $request): AnonymousResourceCollection
+    {
+        $problems = Problem::query()
+            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
+            ->when($request->filled('search'), function ($q) use ($request): void {
+                $term = '%' . $request->string('search') . '%';
+                $q->where(fn ($w) => $w->where('title', 'like', $term)->orWhere('description', 'like', $term));
+            })
+            ->with(['user', 'category'])
+            ->withCount(['solutions', 'comments'])
+            ->latest()
+            ->paginate(15);
+
+        return ProblemResource::collection($problems);
+    }
+
+    public function destroy(Problem $problem): JsonResponse
+    {
+        $problem->delete();
+
+        return response()->json(['message' => 'مشکل حذف شد.']);
+    }
+
     public function pending(): AnonymousResourceCollection
     {
         $problems = Problem::pending()
