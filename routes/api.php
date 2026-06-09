@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Api\V1\Admin\AdminDashboardController;
 use App\Http\Controllers\Api\V1\Admin\AdminProblemController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\Integrations\MessengerWebhookController;
@@ -91,5 +92,10 @@ Route::prefix('v1')->group(function (): void {
         Route::patch('problems/{problem}/status', [AdminProblemController::class, 'updateStatus']);
         Route::patch('problems/{problem}/featured', [AdminProblemController::class, 'setFeatured']);
         Route::patch('problems/{problem}/best-solution', [AdminProblemController::class, 'setBestSolution']);
+        Route::get('problems', [AdminProblemController::class, 'index']);
+        Route::delete('problems/{problem}', [AdminProblemController::class, 'destroy']);
+        Route::get('stats', [AdminDashboardController::class, 'stats']);
+        Route::get('users', [AdminDashboardController::class, 'users']);
+        Route::patch('users/{user}/role', [AdminDashboardController::class, 'setRole']);
     });
 });
