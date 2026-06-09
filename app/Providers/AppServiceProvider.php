@@ -19,6 +19,7 @@ class AppServiceProvider extends ServiceProvider
                 apiKey: config('services.ippanel.api_key', ''),
                 patternCode: config('services.ippanel.pattern_code', ''),
                 sender: config('services.ippanel.sender', ''),
+                patternVariable: config('services.ippanel.pattern_variable', 'code'),
             );
         });
 
