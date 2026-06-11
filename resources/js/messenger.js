@@ -51,11 +51,16 @@ function pickWebApp() {
 
 const { provider, wa } = pickWebApp();
 const hashInitData = initDataFromHash();
+// The effective init-data we'll send to the server for HMAC validation.
+const resolvedInitData = wa?.initData || hashInitData || '';
 
 export const messenger = {
     provider,
-    // Available when we have either an SDK object or raw init-data from the URL.
-    available: !!wa || (!!provider && !!hashInitData),
+    // Available only when we have BOTH a provider and non-empty signed init-data.
+    // Checking initData here prevents the Bale SDK (loaded on every page) from
+    // falsely activating when the app is opened in a plain browser — the SDK
+    // sets window.Bale.WebApp but leaves initData empty outside the Bale app.
+    available: !!provider && !!resolvedInitData,
 
     init() {
         try {
@@ -66,7 +71,7 @@ export const messenger = {
 
     // The signed init-data string the backend validates via HMAC.
     initData() {
-        return wa?.initData || hashInitData || '';
+        return resolvedInitData;
     },
 
     // Best-effort unsigned user info for optimistic UI only (never trusted).

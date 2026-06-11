@@ -85,6 +85,11 @@ export const useAuthStore = defineStore('auth', {
 
         async loginWithMessenger() {
             this.status = 'loading';
+            // Guard: if init-data is empty we're not actually inside a messenger.
+            if (!messenger.initData()) {
+                this.status = 'web_login';
+                return;
+            }
             try {
                 const { data } = await api.post('/auth/messenger', {
                     provider: messenger.provider,
