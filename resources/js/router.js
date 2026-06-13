@@ -7,6 +7,7 @@ const routes = [
     { path: '/submit', name: 'submit', component: () => import('./views/SubmitProblem.vue') },
     { path: '/popular', name: 'popular', component: () => import('./views/Popular.vue') },
     { path: '/profile', name: 'profile', component: () => import('./views/Profile.vue') },
+    { path: '/assembly', name: 'assembly', component: () => import('./views/Assembly.vue') },
     { path: '/admin', name: 'admin', component: () => import('./views/Admin.vue'), meta: { admin: true } },
 ];
 

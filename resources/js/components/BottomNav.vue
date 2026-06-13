@@ -7,6 +7,7 @@ const auth = useAuthStore();
 
 const items = computed(() => {
     const base = [
+        { name: 'assembly', label: 'مجمع', icon: '🏛️' },
         { name: 'profile', label: 'پروفایل', icon: '👤' },
         { name: 'popular', label: 'مشکلات مردمی', icon: '📊' },
         { name: 'submit', label: 'ثبت مشکل', icon: '➕' },

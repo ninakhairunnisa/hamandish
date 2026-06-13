@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\Admin\AdminDashboardController;
 use App\Http\Controllers\Api\V1\Admin\AdminProblemController;
+use App\Http\Controllers\Api\V1\Admin\AssemblyAdminController;
+use App\Http\Controllers\Api\V1\Admin\OfficialController;
+use App\Http\Controllers\Api\V1\AssemblyMembershipController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\Integrations\MessengerWebhookController;
 use App\Http\Controllers\Api\V1\MessengerAuthController;
@@ -78,6 +81,11 @@ Route::prefix('v1')->group(function (): void {
         Route::patch('comments/{comment}', [CommentController::class, 'update']);
         Route::post('comments/{comment}/replies', [CommentController::class, 'storeReply']);
 
+        // Assembly membership
+        Route::get('assembly/form', [AssemblyMembershipController::class, 'form']);
+        Route::get('assembly/my', [AssemblyMembershipController::class, 'show']);
+        Route::post('assembly', [AssemblyMembershipController::class, 'store']);
+
         // Profile
         Route::get('profile', [ProfileController::class, 'show']);
         Route::match(['put', 'post'], 'profile', [ProfileController::class, 'update']);
@@ -109,5 +117,26 @@ Route::prefix('v1')->group(function (): void {
         Route::patch('solutions/{solution}/pin', [AdminDashboardController::class, 'pinSolution']);
         Route::get('settings', [AdminDashboardController::class, 'getSettings']);
         Route::patch('settings', [AdminDashboardController::class, 'updateSettings']);
+
+        // Officials
+        Route::get('officials', [OfficialController::class, 'index']);
+        Route::post('officials', [OfficialController::class, 'store']);
+        Route::patch('officials/{official}', [OfficialController::class, 'update']);
+        Route::delete('officials/{official}', [OfficialController::class, 'destroy']);
+        Route::get('officials/search-user', [OfficialController::class, 'searchUser']);
+        Route::get('problems/{problem}/referrals', [OfficialController::class, 'referrals']);
+        Route::post('problems/{problem}/referrals', [OfficialController::class, 'sendReferral']);
+
+        // Assembly admin
+        Route::get('assembly/roles', [AssemblyAdminController::class, 'roles']);
+        Route::post('assembly/roles', [AssemblyAdminController::class, 'storeRole']);
+        Route::patch('assembly/roles/{role}', [AssemblyAdminController::class, 'updateRole']);
+        Route::delete('assembly/roles/{role}', [AssemblyAdminController::class, 'destroyRole']);
+        Route::get('assembly/settings', [AssemblyAdminController::class, 'getSettings']);
+        Route::patch('assembly/settings', [AssemblyAdminController::class, 'updateSettings']);
+        Route::get('assembly/memberships', [AssemblyAdminController::class, 'memberships']);
+        Route::patch('assembly/memberships/{membership}', [AssemblyAdminController::class, 'updateMembership']);
+        Route::get('assembly/memberships/export', [AssemblyAdminController::class, 'exportCsv']);
+        Route::get('assembly/stats', [AssemblyAdminController::class, 'stats']);
     });
 });
