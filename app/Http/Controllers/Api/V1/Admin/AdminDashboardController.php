@@ -63,8 +63,16 @@ class AdminDashboardController extends Controller
     public function setRole(Request $request, User $user): JsonResponse
     {
         $validated = $request->validate([
-            'role' => ['required', 'in:user,admin'],
+            'role' => ['required', 'in:user,admin'],  // regular admin cannot set super_admin
         ]);
+
+        // Protect super_admin accounts from being demoted by regular admins.
+        if ($user->isSuperAdmin()) {
+            return response()->json(
+                ['message' => 'تغییر نقش ادمین کل توسط ادمین عادی مجاز نیست.'],
+                Response::HTTP_FORBIDDEN,
+            );
+        }
 
         if ($user->id === $request->user()->id && $validated['role'] !== 'admin') {
             return response()->json(

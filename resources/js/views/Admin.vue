@@ -1,10 +1,14 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
+import { useAuthStore } from '../stores/auth';
 import api from '../api';
+
+const auth = useAuthStore();
+const isSuperAdmin = computed(() => auth.user?.role === 'super_admin');
 
 // ── Tabs ────────────────────────────────────────────────────────────────────
 const tab = ref('pending');
-// pending | problems | users | officials | assembly | stats
+// pending | problems | users | officials | assembly | reported | super_settings | stats
 
 const loading  = ref(false);
 const message  = ref(null);
@@ -251,15 +255,84 @@ async function exportCsvBlob() {
     URL.revokeObjectURL(url);
 }
 
+// ── Reported content (super_admin) ───────────────────────────────────────────
+const reportedSolutions = ref([]);
+const reportedComments  = ref([]);
+async function loadReported() {
+    const { data } = await api.get('/super-admin/reported');
+    reportedSolutions.value = data.solutions;
+    reportedComments.value  = data.comments;
+}
+async function reviewContent(type, item, action) {
+    try {
+        await api.post('/super-admin/review', { type, id: item.id, action });
+        if (type === 'solution') reportedSolutions.value = reportedSolutions.value.filter(s => s.id !== item.id);
+        else reportedComments.value = reportedComments.value.filter(c => c.id !== item.id);
+        flash(action === 'restore' ? 'محتوا بازگردانی شد ✅' : 'تأیید شد (پنهان ماند) 🚫');
+    } catch (err) { flash(err.response?.data?.message || 'خطا'); }
+}
+async function banUser(user) {
+    if (!confirm(`کاربر ${user.name || user.phone} مسدود شود؟`)) return;
+    try {
+        await api.patch(`/super-admin/users/${user.id}/ban`, { is_banned: true });
+        flash('کاربر مسدود شد 🔒');
+    } catch (err) { flash(err.response?.data?.message || 'خطا'); }
+}
+
+// ── Super Admin settings ──────────────────────────────────────────────────────
+const superSettings = ref({
+    ippanel_api_key: '', ippanel_sender: '',
+    ippanel_otp_pattern_code: '', ippanel_otp_pattern_variable: 'code',
+    assembly_section_title: '', assembly_nav_label: '',
+    assembly_intro_message: '', guest_can_view: true,
+    report_threshold: 3, comments_enabled: true,
+});
+const superSaving = ref(false);
+async function loadSuperSettings() {
+    const { data } = await api.get('/super-admin/settings');
+    Object.assign(superSettings.value, data);
+    superSettings.value.guest_can_view = data.guest_can_view === '1' || data.guest_can_view === true;
+    superSettings.value.comments_enabled = data.comments_enabled === '1' || data.comments_enabled === true;
+    superSettings.value.report_threshold = parseInt(data.report_threshold) || 3;
+}
+async function saveSuperSettings() {
+    superSaving.value = true;
+    try {
+        await api.patch('/super-admin/settings', superSettings.value);
+        flash('تنظیمات ذخیره شد ✅');
+    } catch (err) { flash(err.response?.data?.message || 'خطا'); }
+    finally { superSaving.value = false; }
+}
+async function setSuperRole(user) {
+    const roles = ['user', 'admin', 'super_admin'];
+    const current = roles.indexOf(user.role);
+    const newRole = prompt(`نقش کاربر:\n0 = کاربر عادی\n1 = ادمین\n2 = ادمین کل\n\nوارد کنید (0-2):`, String(current));
+    if (newRole === null) return;
+    const role = roles[parseInt(newRole)];
+    if (!role) { flash('نقش نامعتبر'); return; }
+    try {
+        await api.patch(`/super-admin/users/${user.id}/role`, { role });
+        user.role = role;
+        flash(`نقش به ${role} تغییر یافت ✅`);
+    } catch (err) { flash(err.response?.data?.message || 'خطا'); }
+}
+
 // ── Tab router ────────────────────────────────────────────────────────────────
-const tabs = [
-    { key: 'pending',   label: 'در انتظار' },
-    { key: 'problems',  label: 'مشکلات' },
-    { key: 'users',     label: 'کاربران' },
-    { key: 'officials', label: 'مسئولین' },
-    { key: 'assembly',  label: 'مجمع' },
-    { key: 'stats',     label: 'آمار' },
-];
+const tabs = computed(() => {
+    const base = [
+        { key: 'pending',   label: 'در انتظار' },
+        { key: 'problems',  label: 'مشکلات' },
+        { key: 'users',     label: 'کاربران' },
+        { key: 'officials', label: 'مسئولین' },
+        { key: 'assembly',  label: 'مجمع' },
+        { key: 'stats',     label: 'آمار' },
+    ];
+    if (isSuperAdmin.value) {
+        base.push({ key: 'reported',       label: 'گزارش‌ها' });
+        base.push({ key: 'super_settings', label: 'تنظیمات کلی' });
+    }
+    return base;
+});
 
 async function switchTab(name) {
     tab.value = name;
@@ -267,12 +340,14 @@ async function switchTab(name) {
     referralProblem.value = null;
     loading.value = true;
     try {
-        if (name === 'stats')     await loadStats();
-        if (name === 'pending')   await loadPending();
-        if (name === 'problems')  await loadProblems();
-        if (name === 'users')     await loadUsers();
-        if (name === 'officials') await loadOfficials();
-        if (name === 'assembly')  await loadAssembly();
+        if (name === 'stats')          await loadStats();
+        if (name === 'pending')        await loadPending();
+        if (name === 'problems')       await loadProblems();
+        if (name === 'users')          await loadUsers();
+        if (name === 'officials')      await loadOfficials();
+        if (name === 'assembly')       await loadAssembly();
+        if (name === 'reported')       await loadReported();
+        if (name === 'super_settings') await loadSuperSettings();
     } finally { loading.value = false; }
 }
 
@@ -437,9 +512,21 @@ onMounted(() => switchTab('pending'));
                         <span v-if="u.label" class="mt-1 inline-block rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-semibold text-white">{{ u.label }}</span>
                     </div>
                     <div class="flex flex-col gap-1.5">
-                        <button class="rounded-xl px-3 py-1.5 text-xs font-semibold active:scale-95"
-                            :class="u.role==='admin'?'bg-rose-100 text-rose-700':'bg-blue-100 text-blue-700'"
-                            @click="toggleRole(u)">{{ u.role==='admin'?'حذف ادمین':'ادمین کن' }}</button>
+                        <!-- Regular admin: only toggle admin/user (not super_admin) -->
+                        <template v-if="!isSuperAdmin">
+                            <button class="rounded-xl px-3 py-1.5 text-xs font-semibold active:scale-95"
+                                :class="u.role==='admin'?'bg-rose-100 text-rose-700':'bg-blue-100 text-blue-700'"
+                                @click="toggleRole(u)"
+                                :disabled="u.role==='super_admin'"
+                            >{{ u.role==='admin'?'حذف ادمین':'ادمین کن' }}</button>
+                        </template>
+                        <!-- Super admin: full role control -->
+                        <template v-else>
+                            <button class="rounded-xl bg-purple-100 px-3 py-1.5 text-xs font-semibold text-purple-700 active:scale-95" @click="setSuperRole(u)">
+                                👑 {{ u.role==='super_admin'?'ادمین کل':'تغییر نقش' }}
+                            </button>
+                            <button class="rounded-xl bg-rose-100 px-3 py-1.5 text-xs font-semibold text-rose-700 active:scale-95" @click="banUser(u)">🔒 مسدود</button>
+                        </template>
                         <button class="rounded-xl bg-indigo-100 px-3 py-1.5 text-xs font-semibold text-indigo-700 active:scale-95" @click="setLabel(u)">🏷️ لیبل</button>
                     </div>
                 </div>
@@ -590,6 +677,95 @@ onMounted(() => switchTab('pending'));
                 </div>
 
             </div>
+
+            <!-- ─── گزارش‌ها (super_admin) ───────────────────────── -->
+            <div v-else-if="tab === 'reported' && isSuperAdmin" class="space-y-4">
+                <p class="text-sm font-semibold text-slate-700">محتوای پنهان‌شده (بیش از آستانه گزارش)</p>
+
+                <div v-if="!reportedSolutions.length && !reportedComments.length" class="py-10 text-center text-sm text-slate-400">
+                    محتوای گزارش‌شده‌ای وجود ندارد. ✅
+                </div>
+
+                <!-- Reported solutions -->
+                <template v-if="reportedSolutions.length">
+                    <p class="text-xs font-bold text-slate-500 uppercase">راه‌حل‌ها</p>
+                    <div v-for="s in reportedSolutions" :key="s.id" class="rounded-3xl bg-white p-4 shadow-sm space-y-2">
+                        <div class="flex items-start justify-between gap-2">
+                            <div>
+                                <p class="text-sm text-slate-700 leading-6">{{ s.body }}</p>
+                                <p class="text-xs text-slate-400">{{ s.user?.name }} | مشکل: {{ s.problem?.title }}</p>
+                            </div>
+                            <span class="shrink-0 rounded-full bg-rose-100 px-2 py-0.5 text-xs text-rose-700">{{ s.reports_count }} گزارش</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="flex-1 rounded-xl bg-emerald-100 py-1.5 text-xs font-semibold text-emerald-700" @click="reviewContent('solution', s, 'restore')">✅ بازگردانی</button>
+                            <button class="flex-1 rounded-xl bg-slate-100 py-1.5 text-xs font-semibold text-slate-600" @click="reviewContent('solution', s, 'remove')">🚫 تأیید پنهان</button>
+                            <button class="rounded-xl bg-rose-100 px-3 py-1.5 text-xs font-semibold text-rose-700" @click="banUser(s.user)">🔒 مسدود</button>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Reported comments -->
+                <template v-if="reportedComments.length">
+                    <p class="text-xs font-bold text-slate-500 uppercase">پاسخ‌ها</p>
+                    <div v-for="c in reportedComments" :key="c.id" class="rounded-3xl bg-white p-4 shadow-sm space-y-2">
+                        <div class="flex items-start justify-between gap-2">
+                            <div>
+                                <p class="text-sm text-slate-700 leading-6">{{ c.body }}</p>
+                                <p class="text-xs text-slate-400">{{ c.user?.name }}</p>
+                            </div>
+                            <span class="shrink-0 rounded-full bg-rose-100 px-2 py-0.5 text-xs text-rose-700">{{ c.reports_count }} گزارش</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="flex-1 rounded-xl bg-emerald-100 py-1.5 text-xs font-semibold text-emerald-700" @click="reviewContent('comment', c, 'restore')">✅ بازگردانی</button>
+                            <button class="flex-1 rounded-xl bg-slate-100 py-1.5 text-xs font-semibold text-slate-600" @click="reviewContent('comment', c, 'remove')">🚫 تأیید پنهان</button>
+                            <button class="rounded-xl bg-rose-100 px-3 py-1.5 text-xs font-semibold text-rose-700" @click="banUser(c.user)">🔒 مسدود</button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- ─── تنظیمات کلی (super_admin only) ───────────────── -->
+            <div v-else-if="tab === 'super_settings' && isSuperAdmin" class="space-y-4">
+                <div class="rounded-3xl bg-white p-5 shadow-sm space-y-4">
+                    <h2 class="font-bold text-slate-800">📱 تنظیمات پیامک (IPPanel)</h2>
+                    <input v-model="superSettings.ippanel_api_key" placeholder="API Key" dir="ltr" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" />
+                    <input v-model="superSettings.ippanel_sender" placeholder="شماره فرستنده" dir="ltr" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" />
+                    <div class="flex gap-2">
+                        <input v-model="superSettings.ippanel_otp_pattern_code" placeholder="کد پترن OTP" dir="ltr" class="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" />
+                        <input v-model="superSettings.ippanel_otp_pattern_variable" placeholder="متغیر (مثال: code)" dir="ltr" class="w-28 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" />
+                    </div>
+                </div>
+
+                <div class="rounded-3xl bg-white p-5 shadow-sm space-y-4">
+                    <h2 class="font-bold text-slate-800">🏛️ بخش مجمع / مشارکت</h2>
+                    <input v-model="superSettings.assembly_nav_label" placeholder="برچسب منو (مثال: مشارکت)" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" />
+                    <input v-model="superSettings.assembly_section_title" placeholder="عنوان صفحه عضویت" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" />
+                    <textarea v-model="superSettings.assembly_intro_message" rows="4" placeholder="متن پیام بالای فرم عضویت…" class="w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500"></textarea>
+                </div>
+
+                <div class="rounded-3xl bg-white p-5 shadow-sm space-y-4">
+                    <h2 class="font-bold text-slate-800">⚙️ تنظیمات عمومی</h2>
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" v-model="superSettings.guest_can_view" class="h-4 w-4 rounded accent-blue-600" />
+                        <span class="text-sm text-slate-700">کاربران مهمان می‌توانند مشکلات را مشاهده کنند</span>
+                    </label>
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" v-model="superSettings.comments_enabled" class="h-4 w-4 rounded accent-blue-600" />
+                        <span class="text-sm text-slate-700">نظرات و پاسخ‌ها فعال باشند</span>
+                    </label>
+                    <div class="flex items-center gap-3">
+                        <label class="text-sm text-slate-700 shrink-0">آستانه گزارش (خودکار پنهان):</label>
+                        <input v-model.number="superSettings.report_threshold" type="number" min="1" max="100" class="w-20 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" />
+                        <span class="text-xs text-slate-400">گزارش</span>
+                    </div>
+                </div>
+
+                <button :disabled="superSaving" class="w-full rounded-xl bg-blue-600 py-3 font-semibold text-white active:scale-95 disabled:opacity-60" @click="saveSuperSettings">
+                    {{ superSaving ? 'در حال ذخیره…' : '💾 ذخیره تنظیمات' }}
+                </button>
+            </div>
+
         </div>
     </div>
 </template>

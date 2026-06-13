@@ -23,19 +23,27 @@ class User extends Authenticatable
         'role',
         'label',
         'show_name',
+        'is_banned',
     ];
 
     protected function casts(): array
     {
         return [
-            'role' => 'string',
+            'role'      => 'string',
             'show_name' => 'boolean',
+            'is_banned' => 'boolean',
         ];
     }
 
+    /** True for both admin and super_admin. */
     public function isAdmin(): bool
     {
-        return $this->role === 'admin';
+        return in_array($this->role, ['admin', 'super_admin'], true);
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === 'super_admin';
     }
 
     public function problems(): HasMany

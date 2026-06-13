@@ -22,13 +22,17 @@ class Comment extends Model
         'content',
         'edited_at',
         'is_pinned',
+        'reports_count',
+        'is_hidden',
     ];
 
     protected function casts(): array
     {
         return [
-            'edited_at' => 'datetime',
-            'is_pinned' => 'boolean',
+            'edited_at'     => 'datetime',
+            'is_pinned'     => 'boolean',
+            'is_hidden'     => 'boolean',
+            'reports_count' => 'integer',
         ];
     }
 
@@ -50,5 +54,10 @@ class Comment extends Model
     public function replies(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(self::class, 'parent_id')->oldest();
+    }
+
+    public function reports(): \Illuminate\Database\Eloquent\Relations\MorphMany
+    {
+        return $this->morphMany(Report::class, 'reportable');
     }
 }
