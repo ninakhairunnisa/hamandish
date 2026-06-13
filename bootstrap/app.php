@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Http\Middleware\CheckAdmin;
+use App\Http\Middleware\CheckBanned;
+use App\Http\Middleware\CheckSuperAdmin;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -25,7 +27,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '*');
 
         $middleware->alias([
-            'admin' => CheckAdmin::class,
+            'admin'       => CheckAdmin::class,
+            'super_admin' => CheckSuperAdmin::class,
+            'banned'      => CheckBanned::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

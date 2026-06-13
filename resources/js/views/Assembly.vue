@@ -1,7 +1,9 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, inject } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '../api';
+
+const gs = inject('globalSettings', { assembly_section_title: 'مشارکت در مجمع مردم مبعوث شده' });
 
 const router = useRouter();
 
@@ -78,7 +80,7 @@ const statusLabel = {
     <div class="min-h-dvh bg-slate-50 pb-24">
         <header class="sticky top-0 z-10 flex items-center gap-3 bg-white/95 px-5 py-4 backdrop-blur shadow-sm">
             <button @click="router.back()" class="text-xl text-slate-500">←</button>
-            <h1 class="font-bold text-slate-800">عضویت در مجمع</h1>
+            <h1 class="font-bold text-slate-800">{{ gs.assembly_section_title ?? 'مشارکت در مجمع' }}</h1>
         </header>
 
         <div v-if="loading" class="flex justify-center py-20">

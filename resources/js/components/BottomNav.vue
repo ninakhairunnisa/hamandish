@@ -1,39 +1,51 @@
 <script setup>
-import { computed } from 'vue';
-import { RouterLink } from 'vue-router';
+import { computed, inject } from 'vue';
+import { RouterLink, useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 
-const auth = useAuthStore();
+const props = defineProps({ guest: { type: Boolean, default: false } });
+
+const auth    = useAuthStore();
+const router  = useRouter();
+const gs      = inject('globalSettings', { assembly_nav_label: 'مشارکت' });
 
 const items = computed(() => {
     const base = [
-        { name: 'assembly', label: 'مجمع', icon: '🏛️' },
-        { name: 'profile', label: 'پروفایل', icon: '👤' },
-        { name: 'popular', label: 'مشکلات مردمی', icon: '📊' },
-        { name: 'submit', label: 'ثبت مشکل', icon: '➕' },
-        { name: 'feed', label: 'خانه', icon: '🏠' },
+        { name: 'assembly', label: gs.assembly_nav_label ?? 'مشارکت', icon: '🏛️' },
+        { name: 'profile',  label: 'پروفایل', icon: '👤' },
+        { name: 'popular',  label: 'مشکلات مردمی', icon: '📊' },
+        { name: 'submit',   label: 'ثبت مشکل', icon: '➕' },
+        { name: 'feed',     label: 'خانه', icon: '🏠' },
     ];
-    // The admin tab appears only for admin users (backend enforces access too).
-    if (auth.user?.role === 'admin') {
+    if (auth.user?.role === 'admin' || auth.user?.role === 'super_admin') {
         base.unshift({ name: 'admin', label: 'مدیریت', icon: '⚙️' });
     }
     return base;
 });
+
+function navigate(item) {
+    // Guest clicking protected items → show login
+    if (props.guest && ['submit', 'profile', 'assembly'].includes(item.name)) {
+        auth.status = 'web_login';
+        return;
+    }
+    router.push({ name: item.name });
+}
 </script>
 
 <template>
     <nav class="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-[480px] border-t border-slate-100 bg-white/95 backdrop-blur">
         <div class="grid px-2 py-2" :style="{ gridTemplateColumns: `repeat(${items.length}, 1fr)` }">
-            <RouterLink
+            <button
                 v-for="item in items"
                 :key="item.name"
-                :to="{ name: item.name }"
-                class="flex flex-col items-center gap-1 py-1 text-xs text-slate-400"
-                active-class="text-blue-600"
+                class="flex flex-col items-center gap-1 py-1 text-xs"
+                :class="$route?.name === item.name ? 'text-blue-600' : 'text-slate-400'"
+                @click="navigate(item)"
             >
                 <span class="text-lg">{{ item.icon }}</span>
                 <span>{{ item.label }}</span>
-            </RouterLink>
+            </button>
         </div>
     </nav>
 </template>

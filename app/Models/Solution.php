@@ -21,6 +21,8 @@ class Solution extends Model
         'edited_at',
         'is_pinned',
         'votes_count',
+        'reports_count',
+        'is_hidden',
     ];
 
     protected function casts(): array
@@ -60,5 +62,10 @@ class Solution extends Model
     public function votes(): MorphMany
     {
         return $this->morphMany(Vote::class, 'votable');
+    }
+
+    public function reports(): MorphMany
+    {
+        return $this->morphMany(Report::class, 'reportable');
     }
 }

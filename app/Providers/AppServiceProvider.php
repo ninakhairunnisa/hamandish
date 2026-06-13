@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Models\Setting;
 use App\Services\Messenger\BaleProvider;
 use App\Services\Messenger\EitaaProvider;
 use App\Services\Messenger\MessengerManager;
@@ -14,31 +15,33 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        // IPPanel: DB settings override .env, with .env as fallback.
+        // Resolved lazily so the DB is available when the service is first used.
         $this->app->singleton(IPPanelSmsService::class, function (): IPPanelSmsService {
+            $dbKey    = Setting::get('ippanel_api_key', '');
+            $dbSender = Setting::get('ippanel_sender', '');
+
             return new IPPanelSmsService(
-                apiKey: config('services.ippanel.api_key', ''),
-                patternCode: config('services.ippanel.pattern_code', ''),
-                sender: config('services.ippanel.sender', ''),
-                patternVariable: config('services.ippanel.pattern_variable', 'code'),
+                apiKey:          $dbKey    ?: (string) config('services.ippanel.api_key', ''),
+                patternCode:     (string) config('services.ippanel.pattern_code', ''),
+                sender:          $dbSender ?: (string) config('services.ippanel.sender', ''),
+                patternVariable: (string) config('services.ippanel.pattern_variable', 'code'),
             );
         });
 
-        $this->app->singleton(MessengerManager::class, function ($app): MessengerManager {
+        $this->app->singleton(MessengerManager::class, function (): MessengerManager {
             return new MessengerManager([
-                'bale' => new BaleProvider(
-                    botToken: (string) config('services.bale.bot_token', ''),
+                'bale'  => new BaleProvider(
+                    botToken:    (string) config('services.bale.bot_token', ''),
                     botUsername: (string) config('services.bale.bot_username', ''),
                 ),
                 'eitaa' => new EitaaProvider(
-                    botToken: (string) config('services.eitaa.bot_token', ''),
+                    botToken:    (string) config('services.eitaa.bot_token', ''),
                     botUsername: (string) config('services.eitaa.bot_username', ''),
                 ),
             ]);
         });
     }
 
-    public function boot(): void
-    {
-        //
-    }
+    public function boot(): void {}
 }

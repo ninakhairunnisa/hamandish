@@ -27,6 +27,7 @@ class UserResource extends JsonResource
             'last_name'  => $this->last_name,
             'avatar_url' => $this->avatar_path ? Storage::url($this->avatar_path) : null,
             'role'       => $this->role,
+            'is_banned'  => (bool) $this->is_banned,
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }

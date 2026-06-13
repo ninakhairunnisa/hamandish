@@ -6,7 +6,9 @@ use App\Http\Controllers\Api\V1\Admin\AdminDashboardController;
 use App\Http\Controllers\Api\V1\Admin\AdminProblemController;
 use App\Http\Controllers\Api\V1\Admin\AssemblyAdminController;
 use App\Http\Controllers\Api\V1\Admin\OfficialController;
+use App\Http\Controllers\Api\V1\Admin\SuperAdminController;
 use App\Http\Controllers\Api\V1\AssemblyMembershipController;
+use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\Integrations\MessengerWebhookController;
 use App\Http\Controllers\Api\V1\MessengerAuthController;
@@ -47,7 +49,10 @@ Route::prefix('v1')->group(function (): void {
     // ---------------------------------------------------------------------
     Route::get('categories', [CategoryController::class, 'index']);
     Route::get('settings', fn () => response()->json([
-        'comments_enabled' => \App\Models\Setting::getBool('comments_enabled'),
+        'comments_enabled'     => \App\Models\Setting::getBool('comments_enabled'),
+        'guest_can_view'       => \App\Models\Setting::getBool('guest_can_view', true),
+        'assembly_section_title' => \App\Models\Setting::get('assembly_section_title', 'مشارکت در مجمع مردم مبعوث شده'),
+        'assembly_nav_label'   => \App\Models\Setting::get('assembly_nav_label', 'مشارکت'),
     ]));
 
     // ---------------------------------------------------------------------
@@ -97,6 +102,10 @@ Route::prefix('v1')->group(function (): void {
         Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount']);
         Route::patch('notifications/{id}/read', [NotificationController::class, 'markAsRead']);
         Route::patch('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+
+        // Reports (any authenticated user can report)
+        Route::post('solutions/{solution}/report', [ReportController::class, 'reportSolution']);
+        Route::post('comments/{comment}/report', [ReportController::class, 'reportComment']);
     });
 
     // ---------------------------------------------------------------------
@@ -111,7 +120,7 @@ Route::prefix('v1')->group(function (): void {
         Route::delete('problems/{problem}', [AdminProblemController::class, 'destroy']);
         Route::get('stats', [AdminDashboardController::class, 'stats']);
         Route::get('users', [AdminDashboardController::class, 'users']);
-        Route::patch('users/{user}/role', [AdminDashboardController::class, 'setRole']);
+        Route::patch('users/{user}/role', [AdminDashboardController::class, 'setRole']); // label only from admin; role from super_admin
         Route::patch('users/{user}/label', [AdminDashboardController::class, 'setLabel']);
         Route::patch('comments/{comment}/pin', [AdminDashboardController::class, 'pinComment']);
         Route::patch('solutions/{solution}/pin', [AdminDashboardController::class, 'pinSolution']);
@@ -138,5 +147,17 @@ Route::prefix('v1')->group(function (): void {
         Route::patch('assembly/memberships/{membership}', [AssemblyAdminController::class, 'updateMembership']);
         Route::get('assembly/memberships/export', [AssemblyAdminController::class, 'exportCsv']);
         Route::get('assembly/stats', [AssemblyAdminController::class, 'stats']);
+    });
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Super Admin (role = super_admin only)
+    // ─────────────────────────────────────────────────────────────────────
+    Route::middleware(['auth:sanctum', 'super_admin'])->prefix('super-admin')->group(function (): void {
+        Route::get('settings', [SuperAdminController::class, 'getSettings']);
+        Route::patch('settings', [SuperAdminController::class, 'updateSettings']);
+        Route::patch('users/{user}/role', [SuperAdminController::class, 'setRole']);
+        Route::patch('users/{user}/ban', [SuperAdminController::class, 'banUser']);
+        Route::get('reported', [SuperAdminController::class, 'reportedContent']);
+        Route::post('review', [SuperAdminController::class, 'reviewContent']);
     });
 });

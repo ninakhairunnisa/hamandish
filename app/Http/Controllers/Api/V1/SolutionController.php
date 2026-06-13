@@ -18,13 +18,17 @@ class SolutionController extends Controller
 {
     public function index(Problem $problem): AnonymousResourceCollection
     {
-        $solutions = $problem->solutions()
-            ->with(['user', 'comments' => fn ($q) => $q->with('user')->oldest()])
+        $query = $problem->solutions()
+            ->with(['user', 'comments' => fn ($q) => $q->with('user')->where('is_hidden', false)->oldest()])
             ->orderByDesc('is_pinned')
-            ->orderByDesc('votes_count')
-            ->paginate(15);
+            ->orderByDesc('votes_count');
 
-        return SolutionResource::collection($solutions);
+        // Admins see everything; regular users see only visible solutions.
+        if (!request()->user()?->isAdmin()) {
+            $query->where('is_hidden', false);
+        }
+
+        return SolutionResource::collection($query->paginate(15));
     }
 
     public function store(StoreSolutionRequest $request, Problem $problem): JsonResponse

@@ -148,6 +148,18 @@ async function togglePin(solution) {
     }
 }
 
+async function reportItem(type, item) {
+    if (!auth.isAuthenticated) { auth.status = 'web_login'; return; }
+    if (!confirm('این محتوا را گزارش می‌دهید؟')) return;
+    try {
+        await api.post(`/${type}s/${item.id}/report`);
+        item._reported = true;
+        alert('گزارش ثبت شد. با تشکر از همکاری شما.');
+    } catch (e) {
+        alert(e.response?.data?.message || 'خطا در ثبت گزارش.');
+    }
+}
+
 onMounted(load);
 </script>
 
@@ -245,10 +257,17 @@ onMounted(load);
                             @click="replyingTo = replyingTo === s.id ? null : s.id"
                         >پاسخ</button>
                         <button
-                            v-if="auth.user?.role === 'admin'"
+                            v-if="auth.user?.role === 'admin' || auth.user?.role === 'super_admin'"
                             class="text-indigo-600"
                             @click="togglePin(s)"
                         >{{ s.is_pinned ? 'حذف سنجاق' : '📌 سنجاق' }}</button>
+                        <!-- Report button (not for own content) -->
+                        <button
+                            v-if="!isMine(s) && !s._reported"
+                            class="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-500 active:scale-95"
+                            @click="reportItem('solution', s)"
+                        >گزارش</button>
+                        <span v-if="s._reported" class="text-[10px] text-slate-400">گزارش شد</span>
                     </span>
                 </div>
 
@@ -286,11 +305,11 @@ onMounted(load);
                             </div>
                         </template>
                         <p v-else class="mt-1 text-sm leading-6 text-slate-700">{{ r.content }}</p>
-                        <button
-                            v-if="canEdit(r) && editingId !== r.id"
-                            class="mt-1 text-xs text-blue-600"
-                            @click="startEdit(r, 'reply')"
-                        >ویرایش</button>
+                        <div class="mt-1 flex gap-2 text-xs">
+                            <button v-if="canEdit(r) && editingId !== r.id" class="text-blue-600" @click="startEdit(r, 'reply')">ویرایش</button>
+                            <button v-if="!isMine(r) && !r._reported" class="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-500 active:scale-95" @click="reportItem('comment', r)">گزارش</button>
+                            <span v-if="r._reported" class="text-[10px] text-slate-400">گزارش شد</span>
+                        </div>
                     </div>
                 </div>
 
