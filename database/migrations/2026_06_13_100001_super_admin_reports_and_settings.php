@@ -70,6 +70,14 @@ return new class extends Migration
             DB::table('settings')->insertOrIgnore(['key' => $key, 'value' => $value]);
         }
 
+        // Ensure the role column can hold 'super_admin' before assigning it.
+        // The original schema defined role as ENUM('user','admin'); on MySQL we
+        // widen it to a plain string here so this assignment never truncates,
+        // regardless of migration ordering. (SQLite already uses a string.)
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE users MODIFY COLUMN role VARCHAR(20) NOT NULL DEFAULT 'user'");
+        }
+
         // Default super admin: the first registered user (id = 1), if present.
         DB::table('users')
             ->where('id', 1)
