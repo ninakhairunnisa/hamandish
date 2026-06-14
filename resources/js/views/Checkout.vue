@@ -5,6 +5,7 @@ import api from '../api';
 import { useCartStore } from '../stores/cart';
 import { useAuthStore } from '../stores/auth';
 import { toman } from '../money';
+import { compressImage } from '../image';
 
 defineOptions({ name: 'Checkout' });
 
@@ -36,11 +37,12 @@ onMounted(() => {
     }
 });
 
-function onReceipt(e) {
+async function onReceipt(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    receiptFile.value = file;
-    receiptPreview.value = URL.createObjectURL(file);
+    const compressed = await compressImage(file);
+    receiptFile.value = compressed;
+    receiptPreview.value = URL.createObjectURL(compressed);
 }
 
 async function submit() {
