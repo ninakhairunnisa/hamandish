@@ -23,6 +23,10 @@ class IPPanelSmsService
 
     public function sendOtp(string $recipient, string $otp): bool
     {
+        if ($this->patternCode === '') {
+            Log::warning('IPPanel OTP skipped: ippanel_otp_pattern_code not configured.');
+            return false;
+        }
         try {
             $response = Http::withHeaders([
                 'apikey' => $this->apiKey,

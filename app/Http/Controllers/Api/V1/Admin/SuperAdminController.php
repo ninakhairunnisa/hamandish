@@ -141,7 +141,7 @@ class SuperAdminController extends Controller
             'solutions' => $solutions->map(fn (Solution $s) => [
                 'id'            => $s->id,
                 'type'          => 'solution',
-                'body'          => $s->body,
+                'body'          => $s->content,
                 'reports_count' => $s->reports_count,
                 'user'          => ['id' => $s->user?->id, 'phone' => $s->user?->phone, 'name' => trim("{$s->user?->first_name} {$s->user?->last_name}")],
                 'problem'       => ['id' => $s->problem?->id, 'title' => $s->problem?->title],
@@ -150,7 +150,7 @@ class SuperAdminController extends Controller
             'comments' => $comments->map(fn (Comment $c) => [
                 'id'            => $c->id,
                 'type'          => 'comment',
-                'body'          => $c->body,
+                'body'          => $c->content,
                 'reports_count' => $c->reports_count,
                 'user'          => ['id' => $c->user?->id, 'phone' => $c->user?->phone, 'name' => trim("{$c->user?->first_name} {$c->user?->last_name}")],
                 'created_at'    => $c->created_at,

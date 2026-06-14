@@ -31,7 +31,7 @@ Route::prefix('v1')->group(function (): void {
         // Defense-in-depth IP throttle on top of the per-phone limiter / attempt counter.
         Route::post('send-otp', [AuthController::class, 'sendOtp'])->middleware('throttle:10,1');
         Route::post('verify-otp', [AuthController::class, 'verifyOtp'])->middleware('throttle:10,1');
-        Route::middleware('auth:sanctum')->get('me', [AuthController::class, 'me']);
+        Route::middleware(['auth:sanctum', 'banned'])->get('me', [AuthController::class, 'me']);
 
         // Bale / Eitaa mini-app login (validates signed init-data).
         Route::post('messenger', [MessengerAuthController::class, 'authenticate'])
@@ -71,7 +71,7 @@ Route::prefix('v1')->group(function (): void {
     // ---------------------------------------------------------------------
     // Authenticated user actions
     // ---------------------------------------------------------------------
-    Route::middleware('auth:sanctum')->group(function (): void {
+    Route::middleware(['auth:sanctum', 'banned'])->group(function (): void {
         // Problems
         Route::post('problems', [ProblemController::class, 'store']);
         Route::post('problems/{problem}/support', [SupportController::class, 'toggle']);
@@ -111,7 +111,7 @@ Route::prefix('v1')->group(function (): void {
     // ---------------------------------------------------------------------
     // Admin
     // ---------------------------------------------------------------------
-    Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function (): void {
+    Route::middleware(['auth:sanctum', 'banned', 'admin'])->prefix('admin')->group(function (): void {
         Route::get('problems/pending', [AdminProblemController::class, 'pending']);
         Route::patch('problems/{problem}/status', [AdminProblemController::class, 'updateStatus']);
         Route::patch('problems/{problem}/featured', [AdminProblemController::class, 'setFeatured']);
@@ -160,7 +160,7 @@ Route::prefix('v1')->group(function (): void {
     // ─────────────────────────────────────────────────────────────────────
     // Super Admin (role = super_admin only)
     // ─────────────────────────────────────────────────────────────────────
-    Route::middleware(['auth:sanctum', 'super_admin'])->prefix('super-admin')->group(function (): void {
+    Route::middleware(['auth:sanctum', 'banned', 'super_admin'])->prefix('super-admin')->group(function (): void {
         Route::get('settings', [SuperAdminController::class, 'getSettings']);
         Route::patch('settings', [SuperAdminController::class, 'updateSettings']);
         Route::patch('users/{user}/role', [SuperAdminController::class, 'setRole']);
