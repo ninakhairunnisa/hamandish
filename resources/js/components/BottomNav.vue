@@ -7,17 +7,31 @@ const props = defineProps({ guest: { type: Boolean, default: false } });
 
 const auth    = useAuthStore();
 const router  = useRouter();
-const gs      = inject('globalSettings', { assembly_nav_label: 'مشارکت' });
+const gs      = inject('globalSettings', { assembly_nav_label: 'مشارکت', shop_enabled: true, shop_nav_label: 'فروشگاه' });
 
 const items = computed(() => {
+    const role = auth.user?.role;
+
+    // A dedicated shop admin gets a focused, shop-centric nav.
+    if (role === 'shop_admin') {
+        return [
+            { name: 'profile',    label: 'پروفایل', icon: '👤' },
+            { name: 'orders',     label: 'سفارش‌ها', icon: '📦' },
+            { name: 'shop',       label: gs.shop_nav_label ?? 'فروشگاه', icon: '🛍️' },
+            { name: 'shop-admin', label: 'مدیریت', icon: '🛠️' },
+        ];
+    }
+
     const base = [
         { name: 'assembly', label: gs.assembly_nav_label ?? 'مشارکت', icon: '🏛️' },
         { name: 'profile',  label: 'پروفایل', icon: '👤' },
-        { name: 'popular',  label: 'مشکلات مردمی', icon: '📊' },
         { name: 'submit',   label: 'ثبت مشکل', icon: '➕' },
         { name: 'feed',     label: 'خانه', icon: '🏠' },
     ];
-    if (auth.user?.role === 'admin' || auth.user?.role === 'super_admin') {
+    if (gs.shop_enabled !== false) {
+        base.splice(2, 0, { name: 'shop', label: gs.shop_nav_label ?? 'فروشگاه', icon: '🛍️' });
+    }
+    if (role === 'admin' || role === 'super_admin') {
         base.unshift({ name: 'admin', label: 'مدیریت', icon: '⚙️' });
     }
     return base;
@@ -25,7 +39,7 @@ const items = computed(() => {
 
 function navigate(item) {
     // Guest clicking protected items → show login
-    if (props.guest && ['submit', 'profile', 'assembly'].includes(item.name)) {
+    if (props.guest && ['submit', 'profile', 'assembly', 'orders'].includes(item.name)) {
         auth.status = 'web_login';
         return;
     }

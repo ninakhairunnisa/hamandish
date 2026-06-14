@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Middleware\CheckAdmin;
 use App\Http\Middleware\CheckBanned;
+use App\Http\Middleware\CheckShopAdmin;
 use App\Http\Middleware\CheckSuperAdmin;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
@@ -29,6 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin'       => CheckAdmin::class,
             'super_admin' => CheckSuperAdmin::class,
+            'shop'        => CheckShopAdmin::class,
             'banned'      => CheckBanned::class,
         ]);
     })

@@ -12,6 +12,10 @@ const globalSettings = ref({
     assembly_nav_label:    'مشارکت',
     assembly_section_title:'مشارکت در مجمع مردم مبعوث شده',
     comments_enabled:      true,
+    shop_enabled:          true,
+    shop_nav_label:        'فروشگاه',
+    shop_bank_card:        '',
+    shop_bank_holder:      '',
 });
 provide('globalSettings', globalSettings);
 

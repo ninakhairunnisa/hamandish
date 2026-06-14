@@ -1,9 +1,11 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import api from '../api';
 
 const auth = useAuthStore();
+const router = useRouter();
 const isSuperAdmin = computed(() => auth.user?.role === 'super_admin');
 
 // ── Tabs ────────────────────────────────────────────────────────────────────
@@ -855,6 +857,9 @@ onMounted(() => switchTab('pending'));
 
             <!-- ─── تنظیمات کلی (super_admin only) ───────────────── -->
             <div v-else-if="tab === 'super_settings' && isSuperAdmin" class="space-y-4">
+                <button class="w-full rounded-2xl bg-purple-600 py-3 text-sm font-bold text-white active:scale-95" @click="router.push({ name: 'shop-admin' })">
+                    🛍️ ورود به مدیریت فروشگاه
+                </button>
                 <div class="rounded-3xl bg-white p-5 shadow-sm space-y-4">
                     <h2 class="font-bold text-slate-800">📱 تنظیمات پیامک (IPPanel)</h2>
                     <input v-model="superSettings.ippanel_api_key" placeholder="API Key" dir="ltr" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" />
