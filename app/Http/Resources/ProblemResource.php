@@ -6,7 +6,6 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
 
 class ProblemResource extends JsonResource
 {
@@ -16,7 +15,7 @@ class ProblemResource extends JsonResource
             'id'              => $this->id,
             'title'           => $this->title,
             'description'     => $this->description,
-            'image_url'       => $this->image_path ? Storage::url($this->image_path) : null,
+            'image_url'       => $this->image_path ? url('storage/' . $this->image_path) : null,
             'status'          => $this->status,
             'is_featured'     => (bool) $this->is_featured,
             'supports_count'  => (int) $this->supports_count,

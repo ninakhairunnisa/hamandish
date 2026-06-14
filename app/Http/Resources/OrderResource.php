@@ -6,7 +6,6 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
 
 class OrderResource extends JsonResource
 {
@@ -18,7 +17,7 @@ class OrderResource extends JsonResource
             'customer_phone' => $this->customer_phone,
             'address'        => $this->address,
             'payment_method' => $this->payment_method,
-            'receipt_url'    => $this->receipt_path ? Storage::url($this->receipt_path) : null,
+            'receipt_url'    => $this->receipt_path ? url('storage/' . $this->receipt_path) : null,
             'status'         => $this->status,
             'total_amount'   => (int) $this->total_amount,
             'note'           => $this->note,
