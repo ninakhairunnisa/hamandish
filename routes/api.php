@@ -7,6 +7,12 @@ use App\Http\Controllers\Api\V1\Admin\AdminProblemController;
 use App\Http\Controllers\Api\V1\Admin\AssemblyAdminController;
 use App\Http\Controllers\Api\V1\Admin\OfficialController;
 use App\Http\Controllers\Api\V1\Admin\SuperAdminController;
+use App\Http\Controllers\Api\V1\Shop\ShopCategoryController;
+use App\Http\Controllers\Api\V1\Shop\ShopOrderController;
+use App\Http\Controllers\Api\V1\Shop\ShopProductController;
+use App\Http\Controllers\Api\V1\Shop\ShopSettingsController;
+use App\Http\Controllers\Api\V1\OrderController;
+use App\Http\Controllers\Api\V1\ShopController;
 use App\Http\Controllers\Api\V1\AssemblyMembershipController;
 use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\AuthController;
@@ -53,7 +59,18 @@ Route::prefix('v1')->group(function (): void {
         'guest_can_view'       => \App\Models\Setting::getBool('guest_can_view', true),
         'assembly_section_title' => \App\Models\Setting::get('assembly_section_title', 'مشارکت در مجمع مردم مبعوث شده'),
         'assembly_nav_label'   => \App\Models\Setting::get('assembly_nav_label', 'مشارکت'),
+        'shop_enabled'         => \App\Models\Setting::getBool('shop_enabled', true),
+        'shop_nav_label'       => \App\Models\Setting::get('shop_nav_label', 'فروشگاه'),
+        'shop_bank_card'       => \App\Models\Setting::get('shop_bank_card', ''),
+        'shop_bank_holder'     => \App\Models\Setting::get('shop_bank_holder', ''),
     ]));
+
+    // ---------------------------------------------------------------------
+    // Shop – public storefront
+    // ---------------------------------------------------------------------
+    Route::get('shop/products', [ShopController::class, 'index']);
+    Route::get('shop/categories', [ShopController::class, 'categories']);
+    Route::get('shop/products/{product}', [ShopController::class, 'show']);
 
     // ---------------------------------------------------------------------
     // Problems – public feed (supports ?search= &category_id= &sort=popular|latest)
@@ -106,6 +123,12 @@ Route::prefix('v1')->group(function (): void {
         // Reports (any authenticated user can report)
         Route::post('solutions/{solution}/report', [ReportController::class, 'reportSolution']);
         Route::post('comments/{comment}/report', [ReportController::class, 'reportComment']);
+
+        // Shop – checkout & own orders
+        Route::post('orders', [OrderController::class, 'store']);
+        Route::get('orders', [OrderController::class, 'index']);
+        Route::get('orders/{order}', [OrderController::class, 'show']);
+        Route::post('orders/{order}/receipt', [OrderController::class, 'uploadReceipt']);
     });
 
     // ---------------------------------------------------------------------
@@ -167,5 +190,32 @@ Route::prefix('v1')->group(function (): void {
         Route::patch('users/{user}/ban', [SuperAdminController::class, 'banUser']);
         Route::get('reported', [SuperAdminController::class, 'reportedContent']);
         Route::post('review', [SuperAdminController::class, 'reviewContent']);
+    });
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Shop Admin (role = shop_admin or super_admin) — shop scope only
+    // ─────────────────────────────────────────────────────────────────────
+    Route::middleware(['auth:sanctum', 'banned', 'shop'])->prefix('shop-admin')->group(function (): void {
+        // Products
+        Route::get('products', [ShopProductController::class, 'index']);
+        Route::post('products', [ShopProductController::class, 'store']);
+        Route::post('products/{product}', [ShopProductController::class, 'update']); // POST for multipart image
+        Route::delete('products/{product}', [ShopProductController::class, 'destroy']);
+
+        // Categories
+        Route::get('categories', [ShopCategoryController::class, 'index']);
+        Route::post('categories', [ShopCategoryController::class, 'store']);
+        Route::patch('categories/{category}', [ShopCategoryController::class, 'update']);
+        Route::delete('categories/{category}', [ShopCategoryController::class, 'destroy']);
+
+        // Orders
+        Route::get('orders', [ShopOrderController::class, 'index']);
+        Route::get('orders/stats', [ShopOrderController::class, 'stats']);
+        Route::get('orders/{order}', [ShopOrderController::class, 'show']);
+        Route::patch('orders/{order}/status', [ShopOrderController::class, 'updateStatus']);
+
+        // Shop settings (bank card, holder, label, enabled)
+        Route::get('settings', [ShopSettingsController::class, 'show']);
+        Route::patch('settings', [ShopSettingsController::class, 'update']);
     });
 });

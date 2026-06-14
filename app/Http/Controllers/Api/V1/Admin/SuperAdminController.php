@@ -82,7 +82,7 @@ class SuperAdminController extends Controller
     public function setRole(Request $request, User $user): JsonResponse
     {
         $data = $request->validate([
-            'role' => ['required', 'in:user,admin,super_admin'],
+            'role' => ['required', 'in:user,admin,super_admin,shop_admin'],
         ]);
 
         // Prevent removing the last super_admin

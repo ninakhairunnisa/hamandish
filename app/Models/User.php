@@ -46,6 +46,23 @@ class User extends Authenticatable
         return $this->role === 'super_admin';
     }
 
+    /** Shop-only admin (no access to the rest of the admin panel). */
+    public function isShopAdmin(): bool
+    {
+        return $this->role === 'shop_admin';
+    }
+
+    /** May manage the shop: dedicated shop admins and super admins. */
+    public function canManageShop(): bool
+    {
+        return in_array($this->role, ['shop_admin', 'super_admin'], true);
+    }
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
     public function problems(): HasMany
     {
         return $this->hasMany(Problem::class);
