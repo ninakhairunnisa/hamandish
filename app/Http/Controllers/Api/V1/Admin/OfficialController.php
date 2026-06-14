@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Official;
 use App\Models\Problem;
 use App\Models\ProblemReferral;
+use App\Models\Setting;
 use App\Models\User;
 use App\Services\SMS\IPPanelSmsService;
 use Illuminate\Http\JsonResponse;
@@ -105,7 +106,15 @@ class OfficialController extends Controller
             return response()->json(['message' => 'شماره تماس مسئول ثبت نشده است.'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        $sent = $sms->sendDirect($phone, $data['message']);
+        // Prefer a registered IPPanel pattern when configured; otherwise fall
+        // back to a direct free-text SMS using the editable message.
+        $patternCode = Setting::get('ippanel_referral_pattern_code', '');
+        if ($patternCode !== '') {
+            $variable = Setting::get('ippanel_referral_pattern_variable', '') ?: 'message';
+            $sent = $sms->sendPattern($phone, $patternCode, [$variable => $data['message']]);
+        } else {
+            $sent = $sms->sendDirect($phone, $data['message']);
+        }
 
         $referral = ProblemReferral::create([
             'problem_id'  => $problem->id,

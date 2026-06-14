@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AssemblyMembership;
 use App\Models\AssemblyRole;
 use App\Models\Setting;
+use App\Services\SMS\IPPanelSmsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -84,13 +85,28 @@ class AssemblyAdminController extends Controller
         return response()->json($memberships);
     }
 
-    public function updateMembership(Request $request, AssemblyMembership $membership): JsonResponse
+    public function updateMembership(Request $request, AssemblyMembership $membership, IPPanelSmsService $sms): JsonResponse
     {
         $data = $request->validate([
             'status'     => ['required', 'in:pending,approved,rejected,recorded'],
             'admin_note' => ['nullable', 'string', 'max:500'],
         ]);
+
+        $wasApproved = $membership->status === 'approved';
         $membership->update($data);
+
+        // Notify the member by SMS the first time they are approved, when a
+        // membership pattern is configured in super-admin settings.
+        if ($data['status'] === 'approved' && !$wasApproved) {
+            $patternCode = Setting::get('ippanel_membership_pattern_code', '');
+            $phone = $membership->fresh('user')->user?->phone;
+            if ($patternCode !== '' && $phone) {
+                $variable = Setting::get('ippanel_membership_pattern_variable', '') ?: 'name';
+                $name = trim(($membership->user?->first_name ?? '') . ' ' . ($membership->user?->last_name ?? ''));
+                $sms->sendPattern($phone, $patternCode, [$variable => $name ?: 'عضو گرامی']);
+            }
+        }
+
         return response()->json($this->formatMembership($membership->fresh('user')));
     }
 

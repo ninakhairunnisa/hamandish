@@ -122,8 +122,16 @@ Route::prefix('v1')->group(function (): void {
         Route::get('users', [AdminDashboardController::class, 'users']);
         Route::patch('users/{user}/role', [AdminDashboardController::class, 'setRole']); // label only from admin; role from super_admin
         Route::patch('users/{user}/label', [AdminDashboardController::class, 'setLabel']);
+        Route::patch('users/{user}/ban', [AdminDashboardController::class, 'banUser']);
         Route::patch('comments/{comment}/pin', [AdminDashboardController::class, 'pinComment']);
         Route::patch('solutions/{solution}/pin', [AdminDashboardController::class, 'pinSolution']);
+
+        // Content moderation (hide/show, delete) — independent of user reports
+        Route::get('moderation', [AdminDashboardController::class, 'moderation']);
+        Route::patch('solutions/{solution}/visibility', [AdminDashboardController::class, 'setSolutionVisibility']);
+        Route::delete('solutions/{solution}', [AdminDashboardController::class, 'deleteSolution']);
+        Route::patch('comments/{comment}/visibility', [AdminDashboardController::class, 'setCommentVisibility']);
+        Route::delete('comments/{comment}', [AdminDashboardController::class, 'deleteComment']);
         Route::get('settings', [AdminDashboardController::class, 'getSettings']);
         Route::patch('settings', [AdminDashboardController::class, 'updateSettings']);
 
