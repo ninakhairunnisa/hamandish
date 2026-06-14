@@ -65,14 +65,19 @@ class ShopProductController extends Controller
     {
         $required = $partial ? 'sometimes' : 'required';
 
-        return $request->validate([
+        $data = $request->validate([
             'name'        => [$required, 'string', 'max:150'],
             'description' => ['nullable', 'string', 'max:2000'],
-            'price'       => [$required, 'integer', 'min:0'],
-            'stock'       => [$required, 'integer', 'min:0'],
+            'price'       => [$required, 'integer', 'min:0', 'max:2000000000'],
+            'stock'       => [$required, 'integer', 'min:0', 'max:1000000'],
             'category_id' => ['nullable', 'integer', 'exists:product_categories,id'],
             'is_active'   => ['sometimes', 'boolean'],
             'image'       => ['nullable', 'image', 'max:4096'],
         ]);
+
+        // The image file is handled separately via Storage; never mass-assign it.
+        unset($data['image']);
+
+        return $data;
     }
 }

@@ -84,22 +84,25 @@ class OrderService
             throw new RuntimeException('وضعیت نامعتبر است.');
         }
 
-        // Returning stock when an order is canceled (only if it wasn't already).
-        if ($status === 'canceled' && $order->status !== 'canceled') {
-            DB::transaction(function () use ($order): void {
-                foreach ($order->items as $item) {
+        return DB::transaction(function () use ($order, $status, $adminNote): Order {
+            // Re-read the order under a lock so two concurrent cancels can't both
+            // pass the "was not already canceled" guard and restore stock twice.
+            $locked = Order::lockForUpdate()->findOrFail($order->id);
+
+            if ($status === 'canceled' && $locked->status !== 'canceled') {
+                foreach ($locked->items as $item) {
                     if ($item->product_id) {
                         Product::where('id', $item->product_id)->increment('stock', $item->quantity);
                     }
                 }
-            });
-        }
+            }
 
-        $order->update([
-            'status'     => $status,
-            'admin_note' => $adminNote ?? $order->admin_note,
-        ]);
+            $locked->update([
+                'status'     => $status,
+                'admin_note' => $adminNote ?? $locked->admin_note,
+            ]);
 
-        return $order;
+            return $locked;
+        });
     }
 }

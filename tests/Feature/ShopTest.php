@@ -138,6 +138,66 @@ class ShopTest extends TestCase
         $this->assertSame(5, $product->fresh()->stock);
     }
 
+    public function test_inactive_product_cannot_be_checked_out(): void
+    {
+        $user = User::factory()->create();
+        $product = Product::factory()->create(['stock' => 5, 'is_active' => false]);
+
+        $this->actingAs($user)
+            ->postJson('/api/v1/orders', [
+                'customer_name'  => 'تست',
+                'customer_phone' => '09120000000',
+                'address'        => 'آدرس تستی برای سفارش',
+                'payment_method' => 'cod',
+                'items'          => [['product_id' => $product->id, 'quantity' => 1]],
+            ])
+            ->assertStatus(422);
+
+        $this->assertSame(5, $product->fresh()->stock);
+    }
+
+    public function test_canceling_twice_does_not_double_restore_stock(): void
+    {
+        $shopAdmin = User::factory()->shopAdmin()->create();
+        $user = User::factory()->create();
+        $product = Product::factory()->create(['stock' => 5]);
+
+        $this->actingAs($user)->postJson('/api/v1/orders', [
+            'customer_name'  => 'تست',
+            'customer_phone' => '09120000000',
+            'address'        => 'آدرس تستی برای سفارش',
+            'payment_method' => 'cod',
+            'items'          => [['product_id' => $product->id, 'quantity' => 2]],
+        ])->assertCreated();
+
+        $orderId = \App\Models\Order::first()->id;
+
+        // Cancel twice — stock must end at 5, not 7.
+        $this->actingAs($shopAdmin)->patchJson("/api/v1/shop-admin/orders/{$orderId}/status", ['status' => 'canceled'])->assertOk();
+        $this->actingAs($shopAdmin)->patchJson("/api/v1/shop-admin/orders/{$orderId}/status", ['status' => 'canceled'])->assertOk();
+
+        $this->assertSame(5, $product->fresh()->stock);
+    }
+
+    public function test_user_cannot_view_another_users_order(): void
+    {
+        $owner = User::factory()->create();
+        $other = User::factory()->create();
+        $product = Product::factory()->create(['stock' => 5]);
+
+        $this->actingAs($owner)->postJson('/api/v1/orders', [
+            'customer_name'  => 'تست',
+            'customer_phone' => '09120000000',
+            'address'        => 'آدرس تستی برای سفارش',
+            'payment_method' => 'cod',
+            'items'          => [['product_id' => $product->id, 'quantity' => 1]],
+        ])->assertCreated();
+
+        $orderId = \App\Models\Order::first()->id;
+
+        $this->actingAs($other)->getJson("/api/v1/orders/{$orderId}")->assertForbidden();
+    }
+
     public function test_super_admin_can_assign_shop_admin_role(): void
     {
         $super = User::factory()->superAdmin()->create();
