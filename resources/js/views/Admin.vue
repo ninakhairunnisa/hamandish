@@ -360,9 +360,9 @@ async function saveSuperSettings() {
     finally { superSaving.value = false; }
 }
 async function setSuperRole(user) {
-    const roles = ['user', 'admin', 'super_admin'];
+    const roles = ['user', 'admin', 'super_admin', 'shop_admin'];
     const current = roles.indexOf(user.role);
-    const newRole = prompt(`نقش کاربر:\n0 = کاربر عادی\n1 = ادمین\n2 = ادمین کل\n\nوارد کنید (0-2):`, String(current));
+    const newRole = prompt(`نقش کاربر:\n0 = کاربر عادی\n1 = ادمین\n2 = ادمین کل\n3 = ادمین فروشگاه\n\nوارد کنید (0-3):`, String(current));
     if (newRole === null) return;
     const role = roles[parseInt(newRole)];
     if (!role) { flash('نقش نامعتبر'); return; }
@@ -436,6 +436,13 @@ onMounted(() => switchTab('pending'));
                 >{{ t.label }}</button>
             </div>
         </header>
+
+        <!-- Shop management entry — visible to every admin -->
+        <div class="px-4 pt-3">
+            <button class="w-full rounded-2xl bg-purple-600 py-3 text-sm font-bold text-white active:scale-95" @click="router.push({ name: 'shop-admin' })">
+                🛍️ ورود به مدیریت فروشگاه
+            </button>
+        </div>
 
         <!-- Flash message -->
         <p v-if="message" class="fixed left-1/2 top-4 z-50 -translate-x-1/2 rounded-full bg-slate-800 px-4 py-2 text-sm text-white shadow-lg">
@@ -565,7 +572,7 @@ onMounted(() => switchTab('pending'));
                     class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500" @keyup.enter="loadUsers" />
                 <div v-for="u in users" :key="u.id" class="flex items-center justify-between rounded-3xl bg-white p-4 shadow-sm">
                     <div>
-                        <p class="font-bold text-slate-800">{{ u.first_name || 'کاربر' }} {{ u.last_name || '' }}<span v-if="u.role==='admin'" class="text-xs"> 👑</span><span v-if="u.role==='super_admin'" class="text-xs"> 👑👑</span></p>
+                        <p class="font-bold text-slate-800">{{ u.first_name || 'کاربر' }} {{ u.last_name || '' }}<span v-if="u.role==='admin'" class="text-xs"> 👑</span><span v-if="u.role==='super_admin'" class="text-xs"> 👑👑</span><span v-if="u.role==='shop_admin'" class="text-xs"> 🛍️</span></p>
                         <p class="text-xs text-slate-400" dir="ltr">{{ u.phone }}</p>
                         <div class="mt-1 flex flex-wrap gap-1">
                             <span v-if="u.label" class="inline-block rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-semibold text-white">{{ u.label }}</span>
@@ -857,9 +864,6 @@ onMounted(() => switchTab('pending'));
 
             <!-- ─── تنظیمات کلی (super_admin only) ───────────────── -->
             <div v-else-if="tab === 'super_settings' && isSuperAdmin" class="space-y-4">
-                <button class="w-full rounded-2xl bg-purple-600 py-3 text-sm font-bold text-white active:scale-95" @click="router.push({ name: 'shop-admin' })">
-                    🛍️ ورود به مدیریت فروشگاه
-                </button>
                 <div class="rounded-3xl bg-white p-5 shadow-sm space-y-4">
                     <h2 class="font-bold text-slate-800">📱 تنظیمات پیامک (IPPanel)</h2>
                     <input v-model="superSettings.ippanel_api_key" placeholder="API Key" dir="ltr" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" />
