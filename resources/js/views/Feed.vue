@@ -1,5 +1,5 @@
 <script setup>
-import { ref, inject, onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '../api';
 import { useAuthStore } from '../stores/auth';
@@ -9,7 +9,6 @@ defineOptions({ name: 'Feed' });
 
 const auth    = useAuthStore();
 const router  = useRouter();
-const gs      = inject('globalSettings', {});
 
 const featured = ref([]);
 const popular  = ref([]);
