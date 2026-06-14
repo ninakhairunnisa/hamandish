@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import api from '../api';
 import { toman } from '../money';
 import { fullDate } from '../time';
+import { compressImage } from '../image';
 
 defineOptions({ name: 'MyOrders' });
 
@@ -38,8 +39,9 @@ async function load() {
 async function uploadReceipt(order, e) {
     const file = e.target.files?.[0];
     if (!file) return;
+    const compressed = await compressImage(file);
     const fd = new FormData();
-    fd.append('receipt', file);
+    fd.append('receipt', compressed);
     try {
         const { data } = await api.post(`/orders/${order.id}/receipt`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
         Object.assign(order, data);

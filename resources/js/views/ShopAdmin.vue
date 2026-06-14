@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue';
 import api from '../api';
 import { toman, groupDigits } from '../money';
 import { fullDate } from '../time';
+import { compressImage } from '../image';
 
 defineOptions({ name: 'ShopAdmin' });
 
@@ -24,11 +25,13 @@ async function loadProducts() {
     products.value = p.data.data;
     categories.value = c.data;
 }
-function onImage(e) {
+async function onImage(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    imageFile.value = file;
-    imagePreview.value = URL.createObjectURL(file);
+    // Downscale before upload so large camera photos don't exceed server limits.
+    const compressed = await compressImage(file);
+    imageFile.value = compressed;
+    imagePreview.value = URL.createObjectURL(compressed);
 }
 function editProduct(p) {
     productForm.value = {
@@ -67,7 +70,8 @@ async function saveProduct() {
         resetProductForm();
         flash('ذخیره شد ✅');
     } catch (err) {
-        flash(err.response?.data?.message || Object.values(err.response?.data?.errors || {})[0]?.[0] || 'خطا');
+        // Prefer the specific field error over the generic validation message.
+        flash(Object.values(err.response?.data?.errors || {})[0]?.[0] || err.response?.data?.message || 'خطا');
     } finally {
         productSaving.value = false;
     }
