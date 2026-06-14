@@ -55,6 +55,43 @@ class IPPanelSmsService
         }
     }
 
+    /** Send a pattern SMS with a custom pattern code and arbitrary values map. */
+    public function sendPattern(string $recipient, string $patternCode, array $values): bool
+    {
+        if (!$patternCode) {
+            return false;
+        }
+        try {
+            $response = Http::withHeaders([
+                'apikey' => $this->apiKey,
+                'Content-Type' => 'application/json',
+            ])->post(self::API_URL, [
+                'pattern_code' => $patternCode,
+                'originator'   => $this->sender,
+                'recipient'    => $recipient,
+                'values'       => $values,
+            ]);
+
+            if ($response->failed()) {
+                Log::error('IPPanel pattern SMS failed', [
+                    'status'       => $response->status(),
+                    'body'         => $response->body(),
+                    'recipient'    => $recipient,
+                    'pattern_code' => $patternCode,
+                ]);
+                return false;
+            }
+
+            return true;
+        } catch (RequestException $e) {
+            Log::error('IPPanel pattern SMS exception', [
+                'message'   => $e->getMessage(),
+                'recipient' => $recipient,
+            ]);
+            return false;
+        }
+    }
+
     public function sendDirect(string $recipient, string $message): bool
     {
         try {

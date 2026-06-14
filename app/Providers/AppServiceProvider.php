@@ -21,11 +21,14 @@ class AppServiceProvider extends ServiceProvider
             $dbKey    = Setting::get('ippanel_api_key', '');
             $dbSender = Setting::get('ippanel_sender', '');
 
+            $dbPatternCode     = Setting::get('ippanel_otp_pattern_code', '');
+            $dbPatternVariable = Setting::get('ippanel_otp_pattern_variable', '');
+
             return new IPPanelSmsService(
                 apiKey:          $dbKey    ?: (string) config('services.ippanel.api_key', ''),
-                patternCode:     (string) config('services.ippanel.pattern_code', ''),
+                patternCode:     $dbPatternCode     ?: (string) config('services.ippanel.pattern_code', ''),
                 sender:          $dbSender ?: (string) config('services.ippanel.sender', ''),
-                patternVariable: (string) config('services.ippanel.pattern_variable', 'code'),
+                patternVariable: $dbPatternVariable ?: (string) config('services.ippanel.pattern_variable', 'code'),
             );
         });
 

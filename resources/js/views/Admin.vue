@@ -125,6 +125,16 @@ async function toggleRole(user) {
         flash(role === 'admin' ? 'ادمین شد 👑' : 'ادمین حذف شد');
     } catch (err) { flash(err.response?.data?.message || 'خطا'); }
 }
+// Ban / unban available to every admin (uses /admin endpoint, not super-admin).
+async function toggleBan(user) {
+    const next = !user.is_banned;
+    if (next && !confirm(`کاربر ${user.first_name || user.phone} مسدود شود؟`)) return;
+    try {
+        const { data } = await api.patch(`/admin/users/${user.id}/ban`, { is_banned: next });
+        user.is_banned = data.is_banned;
+        flash(data.is_banned ? 'کاربر مسدود شد 🔒' : 'مسدودیت برداشته شد 🔓');
+    } catch (err) { flash(err.response?.data?.message || 'خطا'); }
+}
 
 // ── Officials ─────────────────────────────────────────────────────────────────
 const officialForm = ref({ id: null, name: '', position: '', phone: '', notes: '' });
@@ -255,6 +265,48 @@ async function exportCsvBlob() {
     URL.revokeObjectURL(url);
 }
 
+// ── Content moderation (all admins) ──────────────────────────────────────────
+const modSolutions = ref([]);
+const modComments  = ref([]);
+const modTab       = ref('solutions'); // solutions | comments
+async function loadModeration() {
+    const { data } = await api.get('/admin/moderation');
+    modSolutions.value = data.solutions;
+    modComments.value  = data.comments;
+}
+async function toggleSolutionVisibility(s) {
+    const { data } = await api.patch(`/admin/solutions/${s.id}/visibility`, { is_hidden: !s.is_hidden });
+    s.is_hidden = data.is_hidden;
+    flash(s.is_hidden ? 'پنهان شد 🙈' : 'نمایش داده شد 👁️');
+}
+async function deleteSolutionMod(s) {
+    if (!confirm('این راه‌حل برای همیشه حذف شود؟')) return;
+    await api.delete(`/admin/solutions/${s.id}`);
+    modSolutions.value = modSolutions.value.filter(x => x.id !== s.id);
+    flash('حذف شد 🗑️');
+}
+async function toggleCommentVisibility(c) {
+    const { data } = await api.patch(`/admin/comments/${c.id}/visibility`, { is_hidden: !c.is_hidden });
+    c.is_hidden = data.is_hidden;
+    flash(c.is_hidden ? 'پنهان شد 🙈' : 'نمایش داده شد 👁️');
+}
+async function deleteCommentMod(c) {
+    if (!confirm('این پاسخ برای همیشه حذف شود؟')) return;
+    await api.delete(`/admin/comments/${c.id}`);
+    modComments.value = modComments.value.filter(x => x.id !== c.id);
+    flash('حذف شد 🗑️');
+}
+// Ban the author of a piece of content directly from the moderation panel.
+async function banAuthor(user) {
+    if (!user?.id) { flash('کاربر نامشخص'); return; }
+    if (!confirm(`نویسنده (${user.name || user.phone}) مسدود شود؟`)) return;
+    try {
+        await api.patch(`/admin/users/${user.id}/ban`, { is_banned: true });
+        user.is_banned = true;
+        flash('نویسنده مسدود شد 🔒');
+    } catch (err) { flash(err.response?.data?.message || 'خطا'); }
+}
+
 // ── Reported content (super_admin) ───────────────────────────────────────────
 const reportedSolutions = ref([]);
 const reportedComments  = ref([]);
@@ -283,6 +335,8 @@ async function banUser(user) {
 const superSettings = ref({
     ippanel_api_key: '', ippanel_sender: '',
     ippanel_otp_pattern_code: '', ippanel_otp_pattern_variable: 'code',
+    ippanel_referral_pattern_code: '', ippanel_referral_pattern_variable: 'message',
+    ippanel_membership_pattern_code: '', ippanel_membership_pattern_variable: 'name',
     assembly_section_title: '', assembly_nav_label: '',
     assembly_intro_message: '', guest_can_view: true,
     report_threshold: 3, comments_enabled: true,
@@ -324,6 +378,7 @@ const tabs = computed(() => {
         { key: 'problems',  label: 'مشکلات' },
         { key: 'users',     label: 'کاربران' },
         { key: 'officials', label: 'مسئولین' },
+        { key: 'moderation', label: 'دیدگاه‌ها' },
         { key: 'assembly',  label: 'مجمع' },
         { key: 'stats',     label: 'آمار' },
     ];
@@ -345,6 +400,7 @@ async function switchTab(name) {
         if (name === 'problems')       await loadProblems();
         if (name === 'users')          await loadUsers();
         if (name === 'officials')      await loadOfficials();
+        if (name === 'moderation')     await loadModeration();
         if (name === 'assembly')       await loadAssembly();
         if (name === 'reported')       await loadReported();
         if (name === 'super_settings') await loadSuperSettings();
@@ -507,9 +563,12 @@ onMounted(() => switchTab('pending'));
                     class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500" @keyup.enter="loadUsers" />
                 <div v-for="u in users" :key="u.id" class="flex items-center justify-between rounded-3xl bg-white p-4 shadow-sm">
                     <div>
-                        <p class="font-bold text-slate-800">{{ u.first_name || 'کاربر' }} {{ u.last_name || '' }}<span v-if="u.role==='admin'" class="text-xs"> 👑</span></p>
+                        <p class="font-bold text-slate-800">{{ u.first_name || 'کاربر' }} {{ u.last_name || '' }}<span v-if="u.role==='admin'" class="text-xs"> 👑</span><span v-if="u.role==='super_admin'" class="text-xs"> 👑👑</span></p>
                         <p class="text-xs text-slate-400" dir="ltr">{{ u.phone }}</p>
-                        <span v-if="u.label" class="mt-1 inline-block rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-semibold text-white">{{ u.label }}</span>
+                        <div class="mt-1 flex flex-wrap gap-1">
+                            <span v-if="u.label" class="inline-block rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-semibold text-white">{{ u.label }}</span>
+                            <span v-if="u.is_banned" class="inline-block rounded-full bg-rose-600 px-2 py-0.5 text-[10px] font-semibold text-white">🔒 مسدود</span>
+                        </div>
                     </div>
                     <div class="flex flex-col gap-1.5">
                         <!-- Regular admin: only toggle admin/user (not super_admin) -->
@@ -525,8 +584,13 @@ onMounted(() => switchTab('pending'));
                             <button class="rounded-xl bg-purple-100 px-3 py-1.5 text-xs font-semibold text-purple-700 active:scale-95" @click="setSuperRole(u)">
                                 👑 {{ u.role==='super_admin'?'ادمین کل':'تغییر نقش' }}
                             </button>
-                            <button class="rounded-xl bg-rose-100 px-3 py-1.5 text-xs font-semibold text-rose-700 active:scale-95" @click="banUser(u)">🔒 مسدود</button>
                         </template>
+                        <!-- Ban / unban: available to every admin (cannot ban super_admin) -->
+                        <button v-if="u.role!=='super_admin'"
+                            class="rounded-xl px-3 py-1.5 text-xs font-semibold active:scale-95"
+                            :class="u.is_banned ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"
+                            @click="toggleBan(u)"
+                        >{{ u.is_banned ? '🔓 رفع مسدودی' : '🔒 مسدود' }}</button>
                         <button class="rounded-xl bg-indigo-100 px-3 py-1.5 text-xs font-semibold text-indigo-700 active:scale-95" @click="setLabel(u)">🏷️ لیبل</button>
                     </div>
                 </div>
@@ -678,6 +742,70 @@ onMounted(() => switchTab('pending'));
 
             </div>
 
+            <!-- ─── مدیریت دیدگاه‌ها (همه ادمین‌ها) ───────────────── -->
+            <div v-else-if="tab === 'moderation'" class="space-y-4">
+                <!-- Sub-tab bar -->
+                <div class="flex gap-1 rounded-2xl bg-slate-100 p-1 text-xs">
+                    <button v-for="st in [{key:'solutions',label:'راه‌حل‌ها'},{key:'comments',label:'پاسخ‌ها'}]"
+                        :key="st.key"
+                        class="flex-1 rounded-xl py-2 font-semibold transition"
+                        :class="modTab===st.key?'bg-white text-blue-600 shadow-sm':'text-slate-500'"
+                        @click="modTab=st.key">{{ st.label }}</button>
+                </div>
+
+                <!-- Solutions moderation -->
+                <div v-if="modTab==='solutions'" class="space-y-3">
+                    <p v-if="!modSolutions.length" class="py-8 text-center text-sm text-slate-400">راه‌حلی موجود نیست.</p>
+                    <div v-for="s in modSolutions" :key="s.id" class="rounded-3xl bg-white p-4 shadow-sm space-y-2"
+                        :class="s.is_hidden ? 'opacity-60' : ''">
+                        <div class="flex items-start justify-between gap-2">
+                            <div>
+                                <p class="text-sm text-slate-700 leading-6">{{ s.body }}</p>
+                                <p class="text-xs text-slate-400">{{ s.user?.name || 'کاربر' }} | مشکل: {{ s.problem?.title }}</p>
+                            </div>
+                            <div class="flex shrink-0 flex-col items-end gap-1">
+                                <span v-if="s.is_hidden" class="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] text-slate-600">پنهان</span>
+                                <span v-if="s.reports_count" class="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] text-rose-700">{{ s.reports_count }} گزارش</span>
+                                <span v-if="s.user?.is_banned" class="rounded-full bg-rose-600 px-2 py-0.5 text-[10px] text-white">نویسنده مسدود</span>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button class="rounded-xl px-3 py-1.5 text-xs font-semibold active:scale-95"
+                                :class="s.is_hidden?'bg-emerald-100 text-emerald-700':'bg-amber-100 text-amber-700'"
+                                @click="toggleSolutionVisibility(s)">{{ s.is_hidden ? '👁️ نمایش' : '🙈 پنهان' }}</button>
+                            <button class="rounded-xl bg-rose-100 px-3 py-1.5 text-xs font-semibold text-rose-700 active:scale-95" @click="deleteSolutionMod(s)">🗑️ حذف</button>
+                            <button v-if="s.user && !s.user.is_banned" class="rounded-xl bg-slate-800 px-3 py-1.5 text-xs font-semibold text-white active:scale-95" @click="banAuthor(s.user)">🔒 مسدود نویسنده</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comments moderation -->
+                <div v-else class="space-y-3">
+                    <p v-if="!modComments.length" class="py-8 text-center text-sm text-slate-400">پاسخی موجود نیست.</p>
+                    <div v-for="c in modComments" :key="c.id" class="rounded-3xl bg-white p-4 shadow-sm space-y-2"
+                        :class="c.is_hidden ? 'opacity-60' : ''">
+                        <div class="flex items-start justify-between gap-2">
+                            <div>
+                                <p class="text-sm text-slate-700 leading-6">{{ c.body }}</p>
+                                <p class="text-xs text-slate-400">{{ c.user?.name || 'کاربر' }}</p>
+                            </div>
+                            <div class="flex shrink-0 flex-col items-end gap-1">
+                                <span v-if="c.is_hidden" class="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] text-slate-600">پنهان</span>
+                                <span v-if="c.reports_count" class="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] text-rose-700">{{ c.reports_count }} گزارش</span>
+                                <span v-if="c.user?.is_banned" class="rounded-full bg-rose-600 px-2 py-0.5 text-[10px] text-white">نویسنده مسدود</span>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button class="rounded-xl px-3 py-1.5 text-xs font-semibold active:scale-95"
+                                :class="c.is_hidden?'bg-emerald-100 text-emerald-700':'bg-amber-100 text-amber-700'"
+                                @click="toggleCommentVisibility(c)">{{ c.is_hidden ? '👁️ نمایش' : '🙈 پنهان' }}</button>
+                            <button class="rounded-xl bg-rose-100 px-3 py-1.5 text-xs font-semibold text-rose-700 active:scale-95" @click="deleteCommentMod(c)">🗑️ حذف</button>
+                            <button v-if="c.user && !c.user.is_banned" class="rounded-xl bg-slate-800 px-3 py-1.5 text-xs font-semibold text-white active:scale-95" @click="banAuthor(c.user)">🔒 مسدود نویسنده</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- ─── گزارش‌ها (super_admin) ───────────────────────── -->
             <div v-else-if="tab === 'reported' && isSuperAdmin" class="space-y-4">
                 <p class="text-sm font-semibold text-slate-700">محتوای پنهان‌شده (بیش از آستانه گزارش)</p>
@@ -731,9 +859,20 @@ onMounted(() => switchTab('pending'));
                     <h2 class="font-bold text-slate-800">📱 تنظیمات پیامک (IPPanel)</h2>
                     <input v-model="superSettings.ippanel_api_key" placeholder="API Key" dir="ltr" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" />
                     <input v-model="superSettings.ippanel_sender" placeholder="شماره فرستنده" dir="ltr" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" />
+                    <p class="text-xs font-semibold text-slate-500">پترن کد تأیید (OTP)</p>
                     <div class="flex gap-2">
                         <input v-model="superSettings.ippanel_otp_pattern_code" placeholder="کد پترن OTP" dir="ltr" class="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" />
                         <input v-model="superSettings.ippanel_otp_pattern_variable" placeholder="متغیر (مثال: code)" dir="ltr" class="w-28 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" />
+                    </div>
+                    <p class="text-xs font-semibold text-slate-500">پترن ارجاع مشکل به مسئول</p>
+                    <div class="flex gap-2">
+                        <input v-model="superSettings.ippanel_referral_pattern_code" placeholder="کد پترن ارجاع (خالی = پیامک متنی)" dir="ltr" class="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" />
+                        <input v-model="superSettings.ippanel_referral_pattern_variable" placeholder="متغیر" dir="ltr" class="w-28 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" />
+                    </div>
+                    <p class="text-xs font-semibold text-slate-500">پترن تأیید عضویت در مجمع</p>
+                    <div class="flex gap-2">
+                        <input v-model="superSettings.ippanel_membership_pattern_code" placeholder="کد پترن عضویت (خالی = بدون پیامک)" dir="ltr" class="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" />
+                        <input v-model="superSettings.ippanel_membership_pattern_variable" placeholder="متغیر" dir="ltr" class="w-28 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" />
                     </div>
                 </div>
 
