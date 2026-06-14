@@ -32,6 +32,11 @@ class ReportController extends Controller
             'reason' => ['nullable', 'string', 'max:300'],
         ]);
 
+        // Prevent reporting own content.
+        if (isset($reportable->user_id) && $reportable->user_id === $request->user()->id) {
+            return response()->json(['message' => 'نمی‌توانید محتوای خودتان را گزارش دهید.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
         $existing = Report::where('user_id', $request->user()->id)
             ->where('reportable_type', $reportable->getMorphClass())
             ->where('reportable_id', $reportable->id)

@@ -167,7 +167,7 @@ class AdminDashboardController extends Controller
             ->map(fn (Solution $s) => [
                 'id'            => $s->id,
                 'type'          => 'solution',
-                'body'          => $s->body,
+                'body'          => $s->content,
                 'is_hidden'     => (bool) $s->is_hidden,
                 'reports_count' => $s->reports_count,
                 'user'          => ['id' => $s->user?->id, 'name' => trim("{$s->user?->first_name} {$s->user?->last_name}"), 'phone' => $s->user?->phone, 'is_banned' => (bool) $s->user?->is_banned],
@@ -181,7 +181,7 @@ class AdminDashboardController extends Controller
             ->map(fn (Comment $c) => [
                 'id'            => $c->id,
                 'type'          => 'comment',
-                'body'          => $c->body,
+                'body'          => $c->content,
                 'is_hidden'     => (bool) $c->is_hidden,
                 'reports_count' => $c->reports_count,
                 'user'          => ['id' => $c->user?->id, 'name' => trim("{$c->user?->first_name} {$c->user?->last_name}"), 'phone' => $c->user?->phone, 'is_banned' => (bool) $c->user?->is_banned],

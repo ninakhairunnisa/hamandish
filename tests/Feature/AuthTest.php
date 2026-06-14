@@ -19,6 +19,10 @@ class AuthTest extends TestCase
         parent::setUp();
         // Pretend the IPPanel gateway always accepts the request.
         Http::fake(['*ippanel*' => Http::response(['status' => 'ok'], 200)]);
+        // Provide a fake pattern code so the SMS service doesn't skip OTP.
+        \App\Models\Setting::updateOrCreate(['key' => 'ippanel_otp_pattern_code'], ['value' => 'test-pattern']);
+        // Re-bind the singleton with the seeded settings.
+        app()->forgetInstance(\App\Services\SMS\IPPanelSmsService::class);
     }
 
     public function test_send_otp_validates_iranian_phone(): void
