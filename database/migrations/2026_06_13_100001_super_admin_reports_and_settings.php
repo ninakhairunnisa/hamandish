@@ -11,31 +11,43 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Extend users: super_admin role + ban flag
+        // Extend users: ban flag (guard against column already existing on re-run)
         Schema::table('users', function (Blueprint $table): void {
-            $table->boolean('is_banned')->default(false)->after('show_name');
+            if (!Schema::hasColumn('users', 'is_banned')) {
+                $table->boolean('is_banned')->default(false)->after('show_name');
+            }
         });
 
         // Reports (polymorphic — solutions or comments)
-        Schema::create('reports', function (Blueprint $table): void {
-            $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->morphs('reportable');   // reportable_type, reportable_id
-            $table->string('reason', 300)->nullable();
-            $table->timestamps();
+        if (!Schema::hasTable('reports')) {
+            Schema::create('reports', function (Blueprint $table): void {
+                $table->id();
+                $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+                $table->morphs('reportable');   // reportable_type, reportable_id
+                $table->string('reason', 300)->nullable();
+                $table->timestamps();
 
-            $table->unique(['user_id', 'reportable_type', 'reportable_id']);
-        });
+                $table->unique(['user_id', 'reportable_type', 'reportable_id']);
+            });
+        }
 
         // Add reports_count + is_hidden to solutions and comments
         Schema::table('solutions', function (Blueprint $table): void {
-            $table->unsignedInteger('reports_count')->default(0)->after('is_pinned');
-            $table->boolean('is_hidden')->default(false)->after('reports_count');
+            if (!Schema::hasColumn('solutions', 'reports_count')) {
+                $table->unsignedInteger('reports_count')->default(0)->after('is_pinned');
+            }
+            if (!Schema::hasColumn('solutions', 'is_hidden')) {
+                $table->boolean('is_hidden')->default(false)->after('reports_count');
+            }
         });
 
         Schema::table('comments', function (Blueprint $table): void {
-            $table->unsignedInteger('reports_count')->default(0)->after('is_pinned');
-            $table->boolean('is_hidden')->default(false)->after('reports_count');
+            if (!Schema::hasColumn('comments', 'reports_count')) {
+                $table->unsignedInteger('reports_count')->default(0)->after('is_pinned');
+            }
+            if (!Schema::hasColumn('comments', 'is_hidden')) {
+                $table->boolean('is_hidden')->default(false)->after('reports_count');
+            }
         });
 
         // Seed default super_admin settings
