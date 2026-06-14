@@ -33,8 +33,8 @@ router.beforeEach((to) => {
     if (to.meta.admin && !['admin', 'super_admin'].includes(role)) {
         return { name: 'feed' };
     }
-    // Shop admin panel: shop_admin or super_admin only.
-    if (to.meta.shop && !['shop_admin', 'super_admin'].includes(role)) {
+    // Shop admin panel: shop_admin, admin or super_admin.
+    if (to.meta.shop && !['shop_admin', 'admin', 'super_admin'].includes(role)) {
         return { name: 'feed' };
     }
 });

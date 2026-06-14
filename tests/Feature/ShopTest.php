@@ -89,6 +89,13 @@ class ShopTest extends TestCase
         $this->actingAs($user)->getJson('/api/v1/shop-admin/products')->assertForbidden();
     }
 
+    public function test_regular_admin_can_access_shop_management(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)->getJson('/api/v1/shop-admin/products')->assertOk();
+    }
+
     public function test_shop_admin_can_create_product(): void
     {
         $admin = User::factory()->shopAdmin()->create();

@@ -52,10 +52,10 @@ class User extends Authenticatable
         return $this->role === 'shop_admin';
     }
 
-    /** May manage the shop: dedicated shop admins and super admins. */
+    /** May manage the shop: dedicated shop admins plus regular & super admins. */
     public function canManageShop(): bool
     {
-        return in_array($this->role, ['shop_admin', 'super_admin'], true);
+        return in_array($this->role, ['shop_admin', 'admin', 'super_admin'], true);
     }
 
     public function orders(): HasMany
