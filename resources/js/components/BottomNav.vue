@@ -1,6 +1,6 @@
 <script setup>
 import { computed, inject } from 'vue';
-import { RouterLink, useRouter } from 'vue-router';
+import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 
 const props = defineProps({ guest: { type: Boolean, default: false } });

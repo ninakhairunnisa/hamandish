@@ -70,9 +70,9 @@ return new class extends Migration
             DB::table('settings')->insertOrIgnore(['key' => $key, 'value' => $value]);
         }
 
-        // Make the seeded phone a super_admin if a user with that phone exists
+        // Default super admin: the first registered user (id = 1), if present.
         DB::table('users')
-            ->where('phone', '09352396988')
+            ->where('id', 1)
             ->update(['role' => 'super_admin']);
     }
 
